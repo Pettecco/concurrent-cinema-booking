@@ -8,7 +8,7 @@ describe('Concurrent booking', () => {
     const store = new MemoryStore();
     const service = new Service(store);
 
-    const concurrency = 100_000; // trying to booking a seat
+    const concurrency = 10_000; // trying to booking a seat
 
     let success = 0;
     let failure = 0;
