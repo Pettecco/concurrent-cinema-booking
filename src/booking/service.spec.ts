@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'crypto';
 import { Service } from './service.js';
-import { MemoryStore } from './memory-store.js';
+import { ConcurrentMemoryStore } from './concurrent-memory-store.js';
 
 describe('Concurrent booking', () => {
   it('exactly one wins', async () => {
-    const store = new MemoryStore();
+    const store = new ConcurrentMemoryStore();
     const service = new Service(store);
 
     const concurrency = 10_000; // trying to booking a seat
