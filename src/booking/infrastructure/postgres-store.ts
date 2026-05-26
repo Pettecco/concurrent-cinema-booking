@@ -1,6 +1,6 @@
 import { Mutex } from 'async-mutex';
-import type { BookingStore } from './booking-store.js';
-import type { Booking } from '../booking.js';
+import type { BookingStore } from '../domain/booking-store.js';
+import type { Booking } from '../domain/booking.js';
 import { sleep } from '../../utils/sleep.js';
 
 export class ConcurrentMemoryStore implements BookingStore {

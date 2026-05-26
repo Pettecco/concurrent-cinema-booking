@@ -1,6 +1,6 @@
 import { redis } from '../../infra/redis/client.js';
-import type { Booking } from '../booking.js';
-import type { BookingStore } from './booking-store.js';
+import type { Booking } from '../domain/booking.js';
+import type { BookingStore } from '../domain/booking-store.js';
 
 export class RedisLockMemoryStore implements BookingStore {
   private bookings = new Map<string, Booking>();
