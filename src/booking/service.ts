@@ -1,4 +1,4 @@
-import type { BookingStore } from './booking-store.js';
+import type { BookingStore } from './stores/booking-store.js';
 import type { Booking } from './booking.js';
 
 export class Service {

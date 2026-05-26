@@ -1,6 +1,6 @@
 import type { BookingStore } from './booking-store.js';
-import type { Booking } from './booking.js';
-import { sleep } from '../utils/sleep.js';
+import type { Booking } from '../booking.js';
+import { sleep } from '../../utils/sleep.js';
 
 export class MemoryStore implements BookingStore {
   private bookings = new Map<string, Booking>();

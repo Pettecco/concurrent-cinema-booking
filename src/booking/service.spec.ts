@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'crypto';
 import { Service } from './service.js';
-import { ConcurrentMemoryStore } from './concurrent-memory-store.js';
+import { ConcurrentMemoryStore } from './stores/concurrent-memory-store.js';
 
 describe('Concurrent booking', () => {
   it('exactly one wins', async () => {
