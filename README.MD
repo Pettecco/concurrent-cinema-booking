@@ -414,3 +414,84 @@ Cada instância possui:
 Então o lock não é compartilhado.
 
 A race condition volta.
+
+---
+
+### A Solução: Redis Lock + Memory Store
+
+Para resolver o problema de múltiplas instâncias, usamos o Redis como um **lock distribuído**.
+
+### Implementação
+
+```ts
+async book(booking: Booking): Promise<Booking> {
+  const key = `${booking.movieId}:${booking.seatId}`;
+
+  const lockKey = `lock:${key}`;
+
+  const acquired = await redis.set(lockKey, 'locked', 'PX', 300000, 'NX');
+
+  if (!acquired) {
+    throw new Error('seat is locked');
+  }
+
+  try {
+    const alreadyBooked = this.bookings.has(key);
+
+    if (alreadyBooked) {
+      throw new Error('seat already booked');
+    }
+
+    this.bookings.set(key, booking);
+
+    return booking;
+  } finally {
+    await redis.del(lockKey);
+  }
+}
+```
+
+---
+
+### Como Funciona o Lock Distribuído
+
+O Redis usa o comando `SET` com flags especiais:
+
+```bash
+SET lock:screen-1:A1 locked PX 300000 NX
+```
+
+### Flags
+
+```txt
+NX  -> Only if Not eXists (só cria se a chave não existir)
+PX  -> Expiração em milissegundos (TTL de 5 minutos)
+```
+
+### Fluxo
+
+```txt
+REQ1 -> SET NX -> OK (adquiriu o lock)
+REQ2 -> SET NX -> null (lock já existe)
+REQ3 -> SET NX -> null (lock já existe)
+```
+
+### Vantagens
+
+```txt
+- Funciona com múltiplas instâncias
+- Lock é compartilhado via Redis
+- TTL previne deadlocks
+- Finally garante liberação do lock
+```
+
+### Arquitetura
+
+```txt
+Load Balancer
+  ├── Node A ──┐
+  ├── Node B ──┼── Redis (lock compartilhado)
+  └── Node C ──┘
+```
+
+Agora todas as instâncias respeitam o mesmo lock.
