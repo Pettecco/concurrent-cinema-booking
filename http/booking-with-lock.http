@@ -1,0 +1,84 @@
+@baseUrl = http://localhost:3000
+
+### ============================================
+### FLUXO COMPLETO: Booking com Lock
+### ============================================
+
+### 1. Adquirir lock - User 1 no assento A1
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### 2. User 2 tenta adquirir mesmo lock (deve falhar 409)
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440200"
+}
+
+### 3. User 1 cria booking (lock é verificado e liberado automaticamente)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100",
+  "status": "CONFIRMED"
+}
+
+### 4. User 2 tenta criar booking sem lock (deve falhar 403)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440200",
+  "status": "CONFIRMED"
+}
+
+### 5. User 2 adquire lock no assento A2
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440200"
+}
+
+### 6. User 2 cria booking com lock válido (deve sucesso)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440200",
+  "status": "CONFIRMED"
+}
+
+### 7. Listar bookings do filme
+GET {{baseUrl}}/bookings/550e8400-e29b-41d4-a716-446655440001
+
+### 8. Tentar liberar lock já liberado (deve falhar 403)
+DELETE {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### 9. Health check
+GET {{baseUrl}}/health

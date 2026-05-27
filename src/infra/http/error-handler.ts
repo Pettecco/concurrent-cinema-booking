@@ -11,6 +11,7 @@ import {
   SeatLockedError,
   BookingNotFoundError,
   LockNotOwnedError,
+  SeatNotLockedError,
 } from '../../booking/domain/errors.js';
 
 interface ErrorResponse {
@@ -58,6 +59,15 @@ function buildErrorResponse(error: Error): ErrorResponse {
     };
   }
 
+  if (error instanceof SeatNotLockedError) {
+    return {
+      error: {
+        code: 'SEAT_NOT_LOCKED',
+        message: error.message,
+      },
+    };
+  }
+
   if (error instanceof DomainError) {
     return {
       error: {
@@ -87,6 +97,7 @@ function buildErrorResponse(error: Error): ErrorResponse {
 function getStatusCode(error: Error): number {
   if (error instanceof SeatAlreadyBookedError) return 409;
   if (error instanceof SeatLockedError) return 409;
+  if (error instanceof SeatNotLockedError) return 403;
   if (error instanceof LockNotOwnedError) return 403;
   if (error instanceof BookingNotFoundError) return 404;
   if (error instanceof DomainError) return 400;

@@ -32,3 +32,10 @@ export class LockNotOwnedError extends DomainError {
     this.name = 'LockNotOwnedError';
   }
 }
+
+export class SeatNotLockedError extends DomainError {
+  constructor(movieId: string, seatId: string) {
+    super(`Seat ${seatId} is not locked for movie ${movieId}`);
+    this.name = 'SeatNotLockedError';
+  }
+}

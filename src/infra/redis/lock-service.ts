@@ -11,12 +11,16 @@ export class RedisLockService implements ILockService {
   }
 
   async release(key: string, userId: string): Promise<void> {
-    const owner = await this.redis.get(key);
+    const canRelease = await this.verify(key, userId);
 
-    if (owner !== userId) {
+    if (!canRelease) {
       throw new LockNotOwnedError(key, userId);
     }
-
     await this.redis.del(key);
+  }
+
+  async verify(key: string, userId: string): Promise<boolean> {
+    const owner = await this.redis.get(key);
+    return owner === userId;
   }
 }
