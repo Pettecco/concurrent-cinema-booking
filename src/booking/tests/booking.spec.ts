@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'crypto';
-import { RedisLockMemoryStore } from '../infrastructure/redis-store.js';
+import { RedisLockMemoryStore } from '../repositories/redis-store.js';
 import { BookingService } from '../application/booking-service.js';
 
 describe('Concurrent booking', () => {

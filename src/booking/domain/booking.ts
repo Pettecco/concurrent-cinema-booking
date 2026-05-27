@@ -1,5 +1,5 @@
 export interface Booking {
-  id: string;
+  id?: string;
   movieId: string;
   seatId: string;
   userId: string;

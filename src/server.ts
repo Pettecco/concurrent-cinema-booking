@@ -1,16 +1,17 @@
 import express from 'express';
 import cors from 'cors';
-import { RedisLockMemoryStore } from './booking/infrastructure/redis-store.js';
 import { BookingService } from './booking/application/booking-service.js';
 import { BookingController } from './booking/presentation/booking-controller.js';
 import { bookingRoutes } from './booking/presentation/booking-routes.js';
+import { PostgresBookingRepository } from './booking/repositories/postgres-booking-repository.js';
+import { db } from './infra/postgres/client.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-const store = new RedisLockMemoryStore();
-const service = new BookingService(store);
-const controller = new BookingController(service);
+const bookingRepository = new PostgresBookingRepository(db);
+const bookingService = new BookingService(bookingRepository);
+const controller = new BookingController(bookingService);
 
 app.use(cors());
 app.use(express.json());
