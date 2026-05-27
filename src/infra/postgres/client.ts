@@ -1,9 +1,4 @@
-import { Pool } from 'pg';
+import knex from 'knex';
+import config from '../../../knexfile.js';
 
-export const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: 'postgres',
-  database: 'cinema_booking',
-});
+export const db = knex(config);
