@@ -39,9 +39,9 @@ export class PostgresBookingRepository implements IBookingRepository {
   }
 
   async findBySeat(movieId: string, seatId: string): Promise<Booking | null> {
-    const booking = await this.db
+    const booking = await this.db('bookings')
       .where({ movie_id: movieId, seat_id: seatId })
-      .select('id', 'movie_id', 'seat_id', 'user_id', 'status', 'created_at')
+      .select('id', 'movie_id', 'seat_id', 'user_id', 'status')
       .first();
 
     if (!booking) {
