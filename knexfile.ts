@@ -1,13 +1,14 @@
 import type { Knex } from 'knex';
+import { env } from './src/infra/env.js';
 
-const development: Knex.Config = {
+const config: Knex.Config = {
   client: 'pg',
   connection: {
-    host: 'localhost',
-    port: 5432,
-    user: 'postgres',
-    password: 'postgres',
-    database: 'cinema_booking',
+    host: env.DB_HOST,
+    port: env.DB_PORT,
+    user: env.DB_USER,
+    password: env.DB_PASSWORD,
+    database: env.DB_NAME,
   },
   migrations: {
     directory: './src/infra/postgres/migrations',
@@ -16,4 +17,4 @@ const development: Knex.Config = {
   },
 };
 
-export default development;
+export default config;
