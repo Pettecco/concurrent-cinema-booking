@@ -1,0 +1,50 @@
+@baseUrl = http://localhost:3000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Create Booking - Seat A1
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### List Bookings by Movie
+GET {{baseUrl}}/bookings/550e8400-e29b-41d4-a716-446655440001
+
+### Create Booking - Seat A2 (same movie)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440101"
+}
+
+### Create Booking - Same Seat A1 (should fail)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440102"
+}
+
+### Create Booking - Different Movie
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440002",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440103"
+}
+
+### List Bookings for Movie-2
+GET {{baseUrl}}/bookings/550e8400-e29b-41d4-a716-446655440002
