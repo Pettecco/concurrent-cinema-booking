@@ -25,3 +25,10 @@ export class BookingNotFoundError extends DomainError {
     this.name = 'BookingNotFoundError';
   }
 }
+
+export class LockNotOwnedError extends DomainError {
+  constructor(key: string, userId: string) {
+    super(`Lock ${key} is not owned by user ${userId}`);
+    this.name = 'LockNotOwnedError';
+  }
+}

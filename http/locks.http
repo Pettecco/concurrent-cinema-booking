@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:3000
+
+### Adquirir lock - Assento A1
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### Tentar adquirir mesmo assento (deve falhar 409)
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440200"
+}
+
+### Adquirir lock - Assento A2 (diferente, deve sucesso)
+POST {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440200"
+}
+
+### Liberar lock - dono correto (204 No Content)
+DELETE {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### Tentar liberar lock de outro usuário (deve falhar 403)
+DELETE {{baseUrl}}/locks
+Content-Type: application/json
+
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A2",
+  "userId": "550e8400-e29b-41d4-a716-446655440999"
+}
+
+### Health check
+GET {{baseUrl}}/health
