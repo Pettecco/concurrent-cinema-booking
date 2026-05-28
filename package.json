@@ -9,10 +9,10 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "cleanup": "tsx scripts/cleanup.ts",
-    "migrate:make": "knex migrate:make --knexfile knexfile.ts",
-    "migrate:latest": "knex migrate:latest --knexfile knexfile.ts",
-    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.ts",
-    "migrate:status": "knex migrate:status --knexfile knexfile.ts"
+    "migrate:make": "NODE_OPTIONS=\"--import tsx\" knex migrate:make --knexfile knexfile.ts",
+    "migrate:latest": "NODE_OPTIONS=\"--import tsx\" knex migrate:latest --knexfile knexfile.ts",
+    "migrate:rollback": "NODE_OPTIONS=\"--import tsx\" knex migrate:rollback --knexfile knexfile.ts",
+    "migrate:status": "NODE_OPTIONS=\"--import tsx\" knex migrate:status --knexfile knexfile.ts"
   },
   "keywords": [],
   "author": "",

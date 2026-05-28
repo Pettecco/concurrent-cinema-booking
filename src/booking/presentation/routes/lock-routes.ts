@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { LockController } from './lock-controller.js';
+import type { LockController } from '../controllers/lock-controller.js';
 
 export function lockRoutes(controller: LockController): Router {
   const router = Router();

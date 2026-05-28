@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import type { ILockService } from '../domain/lock-service.js';
-import { manipulateLockSchema } from './lock.schema.js';
-import { LockNotOwnedError } from '../domain/errors.js';
-import { logger } from '../../infra/http/logger.js';
+import { logger } from '../../../infra/http/logger.js';
+import { LockNotOwnedError } from '../../domain/errors.js';
+import type { ILockService } from '../../domain/lock-service.js';
+import { manipulateLockSchema } from '../schemas/lock.schema.js';
 
 export class LockController {
   constructor(private readonly lockService: ILockService) {}

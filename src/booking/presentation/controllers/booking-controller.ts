@@ -1,6 +1,9 @@
 import type { Request, Response } from 'express';
-import type { BookingService } from '../application/booking-service.js';
-import { createBookingSchema, listBookingSchema } from './booking.schema.js';
+import type { BookingService } from '../../application/booking-service.js';
+import {
+  createBookingSchema,
+  listBookingSchema,
+} from '../schemas/booking.schema.js';
 
 export class BookingController {
   constructor(private readonly service: BookingService) {}
