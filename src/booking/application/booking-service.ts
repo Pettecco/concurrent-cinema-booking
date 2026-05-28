@@ -40,20 +40,15 @@ export class BookingService {
       'Lock verified successfully'
     );
 
-    const existing = await this.bookingRepository.findBySeat(
-      booking.movieId,
-      booking.seatId
-    );
+    const created = await this.bookingRepository.book(booking);
 
-    if (existing) {
+    if (!created) {
       logger.warn(
         { movieId: booking.movieId, seatId: booking.seatId },
         'Seat already booked'
       );
       throw new SeatAlreadyBookedError(booking.movieId, booking.seatId);
     }
-
-    const created = await this.bookingRepository.create(booking);
 
     logger.info(
       {

@@ -27,6 +27,22 @@ export class MemoryBookingRepository implements IBookingRepository {
     return this.store.get(uniqueKey) ?? null;
   }
 
+  async book(booking: Booking): Promise<Booking | null> {
+    const uniqueKey = `${booking.movieId}:${booking.seatId}`;
+    if (this.store.has(uniqueKey)) {
+      return null;
+    }
+    const created: Booking = {
+      id: booking.id ?? randomUUID(),
+      movieId: booking.movieId,
+      seatId: booking.seatId,
+      userId: booking.userId,
+      status: booking.status,
+    };
+    this.store.set(uniqueKey, created);
+    return created;
+  }
+
   clear(): void {
     this.store.clear();
   }

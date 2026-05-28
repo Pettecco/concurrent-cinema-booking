@@ -56,4 +56,35 @@ export class PostgresBookingRepository implements IBookingRepository {
       status: booking.status,
     };
   }
+
+  async book(booking: Booking): Promise<Booking | null> {
+    return this.db.transaction(async trx => {
+      const existing = await trx('bookings')
+        .where({ movie_id: booking.movieId, seat_id: booking.seatId })
+        .select('id')
+        .forUpdate()
+        .first();
+
+      if (existing) {
+        return null;
+      }
+
+      const [inserted] = await trx('bookings')
+        .insert({
+          movie_id: booking.movieId,
+          seat_id: booking.seatId,
+          user_id: booking.userId,
+          status: booking.status,
+        })
+        .returning('*');
+
+      return {
+        id: inserted.id,
+        movieId: inserted.movie_id,
+        seatId: inserted.seat_id,
+        userId: inserted.user_id,
+        status: inserted.status,
+      };
+    });
+  }
 }

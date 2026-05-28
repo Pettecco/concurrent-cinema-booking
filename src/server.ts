@@ -13,6 +13,7 @@ import { redis } from './infra/redis/client.js';
 import { logger } from './infra/http/logger.js';
 import { errorHandler } from './infra/http/error-handler.js';
 import { env } from './infra/env.js';
+import { HealthController } from './infra/http/health-controller.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ const lockService = new RedisLockService(redis);
 const bookingService = new BookingService(bookingRepository, lockService);
 const bookingController = new BookingController(bookingService);
 const lockController = new LockController(lockService);
+const healthController = new HealthController(db, redis);
 
 app.use(cors());
 app.use(pinoHttp({ logger, autoLogging: false }));
@@ -28,9 +30,7 @@ app.use(express.json());
 app.use('/bookings', bookingRoutes(bookingController));
 app.use('/locks', lockRoutes(lockController));
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
+app.get('/health', (req, res) => healthController.check(req, res));
 
 app.use(errorHandler);
 

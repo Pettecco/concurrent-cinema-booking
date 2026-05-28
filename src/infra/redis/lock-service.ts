@@ -11,12 +11,19 @@ export class RedisLockService implements ILockService {
   }
 
   async release(key: string, userId: string): Promise<void> {
-    const canRelease = await this.verify(key, userId);
+    const script = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      else
+        return 0
+      end
+    `;
 
-    if (!canRelease) {
+    const result = await this.redis.eval(script, 1, key, userId);
+
+    if (result === 0) {
       throw new LockNotOwnedError(key, userId);
     }
-    await this.redis.del(key);
   }
 
   async verify(key: string, userId: string): Promise<boolean> {
