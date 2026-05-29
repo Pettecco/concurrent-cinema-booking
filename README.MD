@@ -1,8 +1,15 @@
 # Cinema Booking - Concorrência & Race Conditions
 
+> Estudo prático de concorrência, race conditions e locks distribuídos em Node.js
+
 ## Objetivo
 
-O objetivo desse projeto é simular um sistema de reserva de assentos de cinema e estudar problemas reais de concorrência.
+O objetivo desse projeto é simular um sistema de reserva de assentos de cinema e estudar problemas reais de concorrência, com foco em:
+
+- **Race conditions** em ambiente assíncrono
+- **Locks distribuídos** com Redis
+- **Comunicação real-time** com WebSocket
+- **Arquitetura em camadas** (Clean Architecture)
 
 A ideia principal:
 
@@ -10,11 +17,11 @@ A ideia principal:
 Múltiplos usuários tentando reservar o mesmo assento ao mesmo tempo.
 ```
 
----
+## A Jornada: Resolvendo Race Conditions
 
-### A Primeira Implementação
+### O Problema Inicial
 
-Começamos com um store in-memory usando `Map`.
+Começamos com um store in-memory usando `Map`:
 
 ```ts
 private bookings = new Map<string, Booking>();
@@ -23,18 +30,10 @@ private bookings = new Map<string, Booking>();
 Cada reserva usa uma chave:
 
 ```ts
-const key = `${booking.movieId}:${booking.seatId}`;
+const key = `${booking.movieId}:${booking.seatId}`; // ex: "screen-1:A1"
 ```
 
-Exemplo:
-
-```txt
-screen-1:A1
-```
-
----
-
-### Implementação Inicial
+### Implementação Ingênua (com race condition)
 
 ```ts
 async book(booking: Booking): Promise<Booking> {
@@ -46,7 +45,7 @@ async book(booking: Booking): Promise<Booking> {
     throw new Error('seat already booked');
   }
 
-  await sleep(1);
+  await sleep(1); // ← JANELA DE RACE CONDITION
 
   this.bookings.set(key, booking);
 
@@ -54,444 +53,579 @@ async book(booking: Booking): Promise<Booking> {
 }
 ```
 
----
-
-### O Problema: Race Condition
-
-Essa implementação parece correta.
-
-Mas existe um problema crítico:
-
-```txt
-READ -> await -> WRITE
-```
-
-O `await` cria uma janela onde outras requests podem entrar.
-
-### Exemplo do Problema
-
-Imagine 3 requests tentando reservar o assento `A1`.
-
-### Fluxo
-
-```txt
-REQ1 -> has() => false
-REQ1 -> await
-
-REQ2 -> has() => false
-REQ2 -> await
-
-REQ3 -> has() => false
-REQ3 -> await
-```
-
-Todas passaram pela validação.
-
-Depois:
-
-```txt
-REQ1 -> set()
-REQ2 -> set()
-REQ3 -> set()
-```
-
-Resultado:
-
-```txt
-3 reservas "venceram"
-```
-
-Mesmo que o `Map` termine com apenas 1 valor.
-
----
-
 ### Por Que Isso Acontece no Node?
 
-Muita gente acredita que Node não sofre race conditions porque Node é `single-threaded`. Mas isso só vale para `código sícrono`.
+Muita gente acredita que Node não sofre race conditions porque é `single-threaded`. Mas isso só vale para **código síncrono**.
 
-#### Código síncrono é seguro
+**Código síncrono é seguro:**
 
 ```ts
 if (!map.has(key)) {
+  map.set(key, value); // Executa sem interrupção
+}
+```
+
+**Código assíncrono NÃO é seguro:**
+
+```ts
+if (!map.has(key)) {
+  await sleep(1); // ← Outras requests entram aqui
   map.set(key, value);
 }
 ```
 
-Tudo executa sem interrupção.
+O `await` cria uma janela onde ocorre **interleaving** de execuções.
 
-#### Código assíncrono NÃO é seguro
+### O Papel do `sleep()`
 
-```ts
-if (!map.has(key)) {
-  await sleep(1);
+O `sleep()` não cria thread. Node continua usando **Event Loop**.
 
-  map.set(key, value);
-}
-```
-
-Agora existe interleaving.
+O objetivo do `sleep()` é **simular latência assíncrona** (banco de dados, Redis, HTTP, APIs externas).
 
 ---
 
-### O Papel do sleep( )
+### Evolução das Soluções
 
-O `sleep()` não cria thread.
-
-Node continua usando `Event Loop`
-
-O objetivo do `sleep()` é apenas:
-
-```txt
-simular latência assíncrona
-```
-
-Assim conseguimos reproduzir o comportamento real de:
-
-- banco de dados
-- redis
-- HTTP
-- filas
-- APIs externas
-
----
-
-## O que o await faz?
-
-Quando o código encontra:
-
-```ts
-await sleep(1);
-```
-
-A execução pausa temporariamente.
-
-Enquanto isso:
-
-```txt
-outras requests continuam executando
-```
-
-Isso permite a race condition.
-
----
-
-### O Teste de Concorrência
-
-Criamos um teste onde milhares de usuários tentam reservar o mesmo assento.
-
-```ts
-await Promise.all(
-  Array.from({ length: concurrency }, async () => {
-    try {
-      await service.book(...);
-      success++;
-    } catch {
-      failure++;
-    }
-  })
-);
-```
-
-Objetivo esperado:
-
-```txt
-1 sucesso
-N-1 falhas
-```
-
-### Resultado Inicial
-
-Sem proteção:
-
-```txt
-Expected: 1
-Received: 347
-```
-
-A race condition apareceu.
-
----
-
-### A Primeira Solução: Mutex Global
-
-Instalamos:
-
-```bash
-pnpm add async-mutex
-```
-
-Depois:
+#### 1. Mutex Global
 
 ```ts
 private mutex = new Mutex();
-```
 
-### Implementação
-
-```ts
 async book(booking: Booking): Promise<Booking> {
   return this.mutex.runExclusive(async () => {
-    const key = `${booking.movieId}:${booking.seatId}`;
-
-    const alreadyBooked = this.bookings.has(key);
-
-    if (alreadyBooked) {
-      throw new Error('seat already booked');
-    }
-
-    await sleep(1);
-
-    this.bookings.set(key, booking);
-
-    return booking;
+    // região crítica protegida
   });
 }
 ```
 
----
+**Prós:**
 
-### O Que é Mutex?
+- Resolve race condition completamente
+- Simples de implementar
 
-Mutex significa `Mutual Exclusion`
+**Contras:**
 
-A ideia é:
-
-```txt
-Somente uma execução pode entrar na região crítica por vez.
-```
-
-### Sem Mutex
-
-```txt
-REQ1 -> entra
-REQ2 -> entra
-REQ3 -> entra
-```
-
-Todas executam simultaneamente.
-
-### Com Mutex
-
-```txt
-REQ1 -> entra
-REQ2 -> espera
-REQ3 -> espera
-```
-
-Depois:
-
-```txt
-REQ1 -> termina
-
-REQ2 -> entra
-REQ2 -> erro
-```
-
-Agora o teste passa.
+- Serializa **todas** as operações
+- A1 bloqueia B2, C3, etc.
 
 ---
 
-### O Problema do Mutex Global
-
-O mutex global resolve a race condition.
-
-Mas cria outro problema:
-
-```txt
-Todo o sistema fica serializado.
-```
-
-### Exemplo
-
-Mesmo reservas independentes:
-
-```txt
-A1
-B2
-C3
-```
-
-Precisam esperar.
-
-### Resultado
-
-```txt
-A1 bloqueia B2
-A1 bloqueia C3
-```
-
-Isso reduz:
-
-- throughput
-- paralelismo
-- escalabilidade
-
----
-
-### Melhorando: Mutex por Seat
-
-Em vez de um mutex global:
-
-```txt
-1 lock para o sistema inteiro
-```
-
-Criamos:
-
-```txt
-1 lock por assento
-```
-
----
-
-### Estrutura
+#### 2. Mutex por Seat
 
 ```ts
 private seatMutexes = new Map<string, Mutex>();
+
+async book(booking: Booking): Promise<Booking> {
+  const key = `${booking.movieId}:${booking.seatId}`;
+  const mutex = this.getOrCreateMutex(key);
+
+  return mutex.runExclusive(async () => {
+    // só este assento é bloqueado
+  });
+}
 ```
 
-### Funcionamento
+**Prós:**
 
-```txt
-screen-1:A1 -> mutex A
-screen-1:B2 -> mutex B
-screen-1:C3 -> mutex C
-```
+- A1 e B2 podem reservar simultaneamente
+- Melhor throughput
 
-Agora:
+**Contras:**
 
-```txt
-A1 e B2 podem reservar ao mesmo tempo.
-```
-
-Mas:
-
-```txt
-A1 vs A1 continua protegido.
-```
+- Memory leak (mutexes nunca são removidos)
+- **Não funciona multi-instância** (cada Node tem seu próprio Map)
 
 ---
 
-### Problemas do Mutex por Seat
-
-Apesar de melhor, ainda existem problemas.
-
-### Problema 1: Memory Leak
-
-O Map de mutexes cresce para sempre.
-
-```txt
-100k seats = 100k mutexes
-```
-
-Mesmo que nunca mais sejam usados.
-
-### Problema 2: Funciona apenas em uma instância
-
-O mutex existe apenas na memória do processo.
-
-### Exemplo
-
-```txt
-Load Balancer
-  ├── Node A
-  ├── Node B
-  └── Node C
-```
-
-Agora:
-
-```txt
-REQ1 -> Node A
-REQ2 -> Node B
-```
-
-Cada instância possui:
-
-- seu próprio Map
-- seu próprio mutex
-
-Então o lock não é compartilhado.
-
-A race condition volta.
-
----
-
-### A Solução: Redis Lock + Memory Store
-
-Para resolver o problema de múltiplas instâncias, usamos o Redis como um **lock distribuído**.
-
-### Implementação
+#### 3. Redis Lock Distribuído
 
 ```ts
 async book(booking: Booking): Promise<Booking> {
-  const key = `${booking.movieId}:${booking.seatId}`;
+  const lockKey = `lock:${booking.movieId}:${booking.seatId}`;
 
-  const lockKey = `lock:${key}`;
-
-  const acquired = await redis.set(lockKey, 'locked', 'PX', 300000, 'NX');
-
+  const acquired = await redis.set(lockKey, userId, 'PX', 300000, 'NX');
   if (!acquired) {
     throw new Error('seat is locked');
   }
 
   try {
-    const alreadyBooked = this.bookings.has(key);
-
-    if (alreadyBooked) {
-      throw new Error('seat already booked');
-    }
-
-    this.bookings.set(key, booking);
-
-    return booking;
+    // opera com exclusividade
   } finally {
     await redis.del(lockKey);
   }
 }
 ```
 
----
-
-### Como Funciona o Lock Distribuído
-
-O Redis usa o comando `SET` com flags especiais:
+**Comando Redis:**
 
 ```bash
-SET lock:screen-1:A1 locked PX 300000 NX
+SET lock:screen-1:A1 user-123 PX 300000 NX
 ```
 
-### Flags
+**Flags:**
 
-```txt
-NX  -> Only if Not eXists (só cria se a chave não existir)
-PX  -> Expiração em milissegundos (TTL de 5 minutos)
-```
+- `NX` → Only if Not eXists (só cria se não existir)
+- `PX` → Expiração em milissegundos (TTL de 5 minutos)
 
-### Fluxo
+**Prós:**
 
-```txt
-REQ1 -> SET NX -> OK (adquiriu o lock)
-REQ2 -> SET NX -> null (lock já existe)
-REQ3 -> SET NX -> null (lock já existe)
-```
-
-### Vantagens
-
-```txt
 - Funciona com múltiplas instâncias
 - Lock é compartilhado via Redis
 - TTL previne deadlocks
-- Finally garante liberação do lock
-```
+- Memory-safe (Redis gerencia expiração)
 
-### Arquitetura
+---
+
+### Arquitetura Multi-Instância
 
 ```txt
-Load Balancer
-  ├── Node A ──┐
-  ├── Node B ──┼── Redis (lock compartilhado)
-  └── Node C ──┘
+                    Load Balancer
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+    ┌───▼───┐        ┌───▼───┐        ┌───▼───┐
+    │Node A │        │Node B │        │Node C │
+    └───┬───┘        └───┬───┘        └───┬───┘
+        │                │                │
+        └────────────────┼────────────────┘
+                         │
+                  ┌──────▼──────┐
+                  │    Redis    │
+                  │(lock shared)│
+                  └─────────────┘
 ```
 
 Agora todas as instâncias respeitam o mesmo lock.
+
+## Arquitetura Atual
+
+### Visão Geral
+
+```
+┌─────────────────────────────────────────────────────┐
+│              FRONTEND (Browser)                     │
+│         HTTP Requests + WebSocket Connection        │
+└─────────────────────────────────────────────────────┘
+           │                        │
+           │ HTTP                   │ WebSocket
+           ↓                        ↑
+┌─────────────────────────────────────────────────────┐
+│              BACKEND (Node.js + Express)            │
+│  ┌───────────────┐  ┌─────────────────────────────┐ │
+│  │ HTTP Routes   │  │ WebSocket Server            │ │
+│  │ POST /locks   │  │ - Broadcast events          │ │
+│  │ POST /bookings│  │ - Redis Keyspace Events     │ │
+│  └───────────────┘  └─────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+           │                        │
+           ↓                        ↓
+┌──────────────────┐     ┌──────────────────┐
+│   PostgreSQL     │     │     Redis        │
+│   (Bookings)     │     │ (Locks + Events) │
+└──────────────────┘     └──────────────────┘
+```
+
+---
+
+### Camadas (Clean Architecture)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   PRESENTATION LAYER                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │  Booking     │  │    Lock      │  │   Health     │   │
+│  │  Controller  │  │  Controller  │  │  Controller  │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
+│  ┌──────────────┐  ┌──────────────┐                     │
+│  │    Routes    │  │   Schemas    │                     │
+│  │              │  │    (Zod)     │                     │
+│  └──────────────┘  └──────────────┘                     │
+└─────────────────────────────────────────────────────────┘
+                        │ uses
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│                   APPLICATION LAYER                     │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              BookingService                      │   │
+│  │ - book(booking)         → Regra: lock obrigatório│   │
+│  │ - listBookings(movieId) → Regra: verifica owner  │   │
+│  │ - findBookingBySeat()   → Regra: libera após ok  │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                        │ uses
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│                     DOMAIN LAYER                        │
+│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
+│  │ IBooking       │  │ ILock          │  │  Domain  │   │
+│  │ Repository     │  │ Service        │  │  Errors  │   │
+│  │ (interface)    │  │ (interface)    │  │          │   │
+│  └────────────────┘  └────────────────┘  └──────────┘   │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              Entities                            │   │
+│  │  - Booking (id, movieId, seatId, userId, status) │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                        ↑ implements
+                        │
+┌─────────────────────────────────────────────────────────┐
+│                  INFRASTRUCTURE LAYER                   │
+│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
+│  │ Postgres       │  │ Redis          │  │ WebSocket│   │
+│  │ Repository     │  │ Lock Service   │  │ Server   │   │
+│  │ (Knex + pg)    │  │ (ioredis)      │  │ (ws)     │   │
+│  └────────────────┘  └────────────────┘  └──────────┘   │
+│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
+│  │ Memory         │  │ Memory         │  │ Redis    │   │
+│  │ Repository     │  │ Lock Service   │  │ Keyspace │   │
+│  │ (testes)       │  │ (testes)       │  │ Listener │   │
+│  └────────────────┘  └────────────────┘  └──────────┘   │
+│  ┌────────────────┐  ┌────────────────┐                 │
+│  │ Pino           │  │ Error          │                 │
+│  │ Logger         │  │ Handler        │                 │
+│  └────────────────┘  └────────────────┘                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Tecnologias
+
+| Tecnologia                                                                                                                  | Descrição                      |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" width="16"/> Node.js               | Runtime JavaScript no servidor |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="16"/> TypeScript    | Linguagem com tipagem estática |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pnpm/pnpm-original.svg" width="16"/> pnpm                      | Package manager rápido         |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" width="16"/> Express 5           | Framework HTTP                 |
+| <img src="https://raw.githubusercontent.com/colinhacks/zod/main/logo.svg" width="16"/> Zod                                  | Validação de schemas           |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="16"/> PostgreSQL 16 | Banco relacional               |
+| <img src="https://knexjs.org/favicon.svg" width="16"/> Knex                                                                 | Query builder e migrations     |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" width="16"/> Redis 7                 | Cache e locks distribuídos     |
+| <img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Socket-io.svg" width="16"/> WebSocket 8                       | Conexão persistente            |
+| <img src="https://raw.githubusercontent.com/pinojs/pino/main/favicon.ico" width="16"/> Pino 10                              | Logger estruturado             |
+| <img src="https://raw.githubusercontent.com/pinojs/pino/main/favicon.ico" width="16"/> pino-http 11                         | Middleware de log HTTP         |
+| <img src="https://raw.githubusercontent.com/vitest-dev/vitest/main/docs/public/logo.svg" width="16"/> Vitest 4              | Framework de testes            |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="16"/> Docker                | Containers                     |
+
+## Setup
+
+### Pré-requisitos
+
+- Node.js v22+
+- pnpm v11+
+- Docker + Docker Compose
+
+### Instalação
+
+```bash
+# Clonar repositório
+git clone <repo-url>
+cd concurrent-cinema-booking
+
+# Instalar dependências
+pnpm install
+
+# Rodar containers (PostgreSQL + Redis)
+docker-compose up -d
+
+# Rodar migrations
+pnpm migrate:latest
+
+# Iniciar servidor (dev mode)
+pnpm dev
+```
+
+O servidor estará disponível em `http://localhost:3000`
+
+## API
+
+### HTTP Endpoints
+
+| Método   | Endpoint             | Descrição                | Status Codes               |
+| -------- | -------------------- | ------------------------ | -------------------------- |
+| `POST`   | `/locks`             | Adquire lock             | `200`, `400`, `409`        |
+| `DELETE` | `/locks`             | Libera lock              | `204`, `400`, `403`        |
+| `POST`   | `/bookings`          | Cria reserva             | `201`, `400`, `403`, `409` |
+| `GET`    | `/bookings/:movieId` | Lista reservas por filme | `200`                      |
+| `GET`    | `/health`            | Health check             | `200`                      |
+
+---
+
+### POST /locks
+
+Adquire lock em um assento por 5 minutos.
+
+**Request:**
+
+```json
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "lockKey": "lock:550e8400-e29b-41d4-a716-446655440001:A1",
+  "expiresAt": "2026-05-27T15:05:00.000Z"
+}
+```
+
+**Response (409):**
+
+```json
+{
+  "error": {
+    "code": "SEAT_LOCKED",
+    "message": "Seat A1 is already locked"
+  }
+}
+```
+
+---
+
+### DELETE /locks
+
+Libera lock de um assento.
+
+**Request:**
+
+```json
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+```
+
+**Response (204):** `No Content`
+
+**Response (403):**
+
+```json
+{
+  "error": {
+    "code": "LOCK_NOT_OWNED",
+    "message": "Lock lock:... is not owned by user ..."
+  }
+}
+```
+
+---
+
+### POST /bookings
+
+Cria reserva de assento (requer lock válido).
+
+**Request:**
+
+```json
+{
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100",
+  "status": "CONFIRMED"
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "...",
+  "movieId": "...",
+  "seatId": "A1",
+  "userId": "...",
+  "status": "CONFIRMED"
+}
+```
+
+**Response (403):**
+
+```json
+{
+  "error": {
+    "code": "SEAT_NOT_LOCKED",
+    "message": "Seat A1 is not locked for movie ..."
+  }
+}
+```
+
+**Response (409):**
+
+```json
+{
+  "error": {
+    "code": "SEAT_ALREADY_BOOKED",
+    "message": "Seat A1 is already booked for movie ..."
+  }
+}
+```
+
+---
+
+### WebSocket Events
+
+**Conexão:** `ws://localhost:3000`
+
+| Evento          | Direção         | Payload                                | Descrição      |
+| --------------- | --------------- | -------------------------------------- | -------------- |
+| `SEAT_SELECTED` | Server → Client | `{movieId, seatId, userId, expiresAt}` | Lock adquirido |
+| `SEAT_BOOKED`   | Server → Client | `{movieId, seatId, bookingId}`         | Reserva criada |
+| `SEAT_RELEASED` | Server → Client | `{movieId, seatId}`                    | Lock liberado  |
+
+**Exemplo de evento:**
+
+```json
+{
+  "type": "SEAT_BOOKED",
+  "occurredAt": "2026-05-27T14:00:00.000Z",
+  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "seatId": "A1",
+  "bookingId": "uuid-123"
+}
+```
+
+## 🧪 Testes
+
+```bash
+# Rodar todos os testes
+pnpm test
+
+# Limpar banco e Redis (útil entre testes manuais)
+pnpm cleanup
+```
+
+### Arquivos de Teste HTTP
+
+Use a extensão **REST Client** no VSCode:
+
+- `http/locks.http` - Testes de lock (acquire/release)
+- `http/booking-with-lock.http` - Fluxo completo de booking com lock
+
+## Decisões de Design
+
+### Por que Lock Obrigatório?
+
+- Garante que nenhum booking seja criado sem exclusividade
+- Previne race conditions em multi-instância
+- Frontend tem feedback imediato (assento selecionado)
+- UX melhor (usuário sabe na hora se está disponível)
+
+### Por que TTL de 5 Minutos?
+
+- Tempo razoável pra usuário completar o booking
+- Previne locks órfãos (usuário abandona fluxo)
+- Redis expira automaticamente (sem cleanup manual)
+- Balanceia entre UX e throughput do sistema
+
+### Por que Liberação Automática?
+
+- Frontend não precisa chamar `DELETE /locks` manualmente
+- Garante que lock sempre é liberado (finally)
+
+### Por que Validar Ownership?
+
+- Previne que usuário A libere lock do usuário B
+- Segurança básica (sem autenticação completa)
+- Nível adicional de proteção contra bugs maliciosos
+- Audit trail (sabe quem tinha o lock)
+
+### Por que WebSocket + Redis Keyspace Events?
+
+- Notificação em tempo real pra todos os clientes
+- TTL expiry é detectado automaticamente
+- Frontend não precisa fazer polling
+- Menos tráfego de rede
+
+## Pub/Sub vs Keyspace Events
+
+### Qual a diferença?
+
+**Redis Pub/Sub** (Publish/Subscribe):
+
+- Você **publica** mensagens em um canal
+- Clients **inscritos** recebem a mensagem
+- **Use case:** broadcast manual de eventos
+
+```typescript
+// Publish
+await redis.publish(
+  'seat-events',
+  JSON.stringify({ type: 'BOOKED', seat: 'A1' })
+);
+
+// Subscribe
+const subscriber = redis.duplicate();
+await subscriber.subscribe('seat-events', message => {
+  console.log('Received:', message);
+});
+```
+
+**Redis Keyspace Events** (notificação automática):
+
+- Redis **notifica automaticamente** quando chaves mudam
+- **Use case:** TTL expiry, deletes, modificações
+
+```typescript
+// Habilitar keyspace events (redis.conf)
+notify-keyspace-events Ex  // Ex = events de expire
+
+// Ouvir eventos de expiração
+const sub = redis.duplicate();
+await sub.psubscribe('__keyevent@0__:expired', (key) => {
+  console.log('Key expired:', key);
+  // Broadcast WebSocket: "lock released"
+});
+```
+
+### O que usamos no projeto?
+
+**Ambos!**
+
+| Funcionalidade           | Implementação         | Por quê                                  |
+| ------------------------ | --------------------- | ---------------------------------------- |
+| Broadcast de eventos     | WebSocket Server      | Clients conectados recebem em tempo real |
+| TTL expiry detection     | Redis Keyspace Events | Lock expira → WebSocket avisa clients    |
+| Lock acquisition/release | Manual (código)       | Controle fino sobre quando broadcast     |
+
+### Fluxo Completo
+
+```
+1. User adquire lock → Redis SET
+2. Backend → WebSocket broadcast "SEAT_SELECTED"
+3. TTL expira (5 min) → Redis Keyspace Event
+4. Keyspace Listener → WebSocket broadcast "SEAT_RELEASED"
+5. Todos os clients atualizam UI
+```
+
+**Por que não só Pub/Sub?**
+
+- Pub/Sub não notifica TTL expiry automaticamente
+- Keyspace Events é mais confiável para locks
+- WebSocket é melhor pra comunicação com frontend (browser)
+
+---
+
+## Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+pnpm dev              # Inicia servidor em watch mode
+
+# Build
+pnpm build            # Compila TypeScript
+pnpm start            # Roda build em produção
+
+# Database
+pnpm migrate:make     # Cria nova migration
+pnpm migrate:latest   # Roda migrations pendentes
+pnpm migrate:rollback # Desfaz última migration
+pnpm migrate:status   # Mostra status das migrations
+
+# Utilitários
+pnpm cleanup          # Limpa banco e Redis
+pnpm test             # Roda testes
+```
