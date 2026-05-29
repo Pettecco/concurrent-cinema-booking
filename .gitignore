@@ -50,6 +50,7 @@ pids
 # testing
 playwright-report
 test-results
+scripts
 
 # misc
 *.local
