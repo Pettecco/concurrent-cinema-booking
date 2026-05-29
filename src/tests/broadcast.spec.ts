@@ -13,7 +13,9 @@ describe('createBroadcast', () => {
 
   beforeEach(() => {
     mockIO = makeMockIO();
-    broadcast = createBroadcast(mockIO as unknown as import('socket.io').Server);
+    broadcast = createBroadcast(
+      mockIO as unknown as import('socket.io').Server
+    );
   });
 
   it('emitSeatLocked calls io.to(movieId).emit with correct payload', () => {

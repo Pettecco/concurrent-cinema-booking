@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { randomUUID } from 'crypto';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryLockService } from '../booking/repositories/memory-lock-service.js';
 
 describe('MemoryLockService', () => {

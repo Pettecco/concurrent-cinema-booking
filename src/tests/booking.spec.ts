@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { BookingService } from '../application/booking-service.js';
-import { MemoryLockService } from '../repositories/memory-lock-service.js';
-import { MemoryBookingRepository } from '../repositories/memory-booking-repository.js';
+import { BookingService } from '../booking/application/booking-service.js';
+import { MemoryLockService } from '../booking/repositories/memory-lock-service.js';
+import { MemoryBookingRepository } from '../booking/repositories/memory-booking-repository.js';
 import {
   SeatAlreadyBookedError,
   SeatNotLockedError,
   LockNotOwnedError,
-} from '../domain/errors.js';
+} from '../booking/domain/errors.js';
 
 function makeBooking(overrides?: { userId?: string; seatId?: string }) {
   return {
@@ -90,7 +90,9 @@ describe('BookingService', () => {
       const secondBooking = makeBooking({ seatId, userId: secondUserId });
       secondBooking.movieId = movieId;
 
-      await expect(service.book(secondBooking)).rejects.toThrow(SeatAlreadyBookedError);
+      await expect(service.book(secondBooking)).rejects.toThrow(
+        SeatAlreadyBookedError
+      );
     });
 
     it('releases lock after successful booking', async () => {
@@ -129,9 +131,9 @@ describe('BookingService', () => {
 
       await lockService.acquire(lockKey, 300_000, booking.userId);
 
-      await expect(lockService.release(lockKey, 'another-user')).rejects.toThrow(
-        LockNotOwnedError
-      );
+      await expect(
+        lockService.release(lockKey, 'another-user')
+      ).rejects.toThrow(LockNotOwnedError);
     });
   });
 
@@ -180,7 +182,11 @@ describe('BookingService', () => {
           const lockKey = `lock:${movieId}:${seatId}`;
 
           try {
-            const acquired = await lockService.acquire(lockKey, 300_000, userId);
+            const acquired = await lockService.acquire(
+              lockKey,
+              300_000,
+              userId
+            );
             if (!acquired) {
               seatNotLocked++;
               return;

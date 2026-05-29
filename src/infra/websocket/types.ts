@@ -5,8 +5,6 @@ export const clientToServerSchema = z.object({
   movieId: z.uuid(),
 });
 
-export type ClientToServerEvent = z.infer<typeof clientToServerSchema>;
-
 export const serverToClientSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('seat_locked'),
@@ -38,5 +36,3 @@ export const serverToClientSchema = z.discriminatedUnion('type', [
 ]);
 
 export type ServerToClientEvent = z.infer<typeof serverToClientSchema>;
-
-export type ServerEventType = ServerToClientEvent['type'];

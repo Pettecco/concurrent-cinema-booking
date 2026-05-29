@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import type { Knex } from 'knex';
 import type { Redis } from 'ioredis';
-import { logger } from './logger.js';
 
 export class HealthController {
   constructor(

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { HealthController } from '../infra/http/health-controller.js';
 
 function makeReq() {

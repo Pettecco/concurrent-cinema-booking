@@ -6,7 +6,10 @@ import { MemoryBookingRepository } from '../booking/repositories/memory-booking-
 import { MemoryLockService } from '../booking/repositories/memory-lock-service.js';
 import type { Broadcast } from '../infra/websocket/broadcast.js';
 
-function makeReq(body: Record<string, unknown>, params?: Record<string, string>) {
+function makeReq(
+  body: Record<string, unknown>,
+  params?: Record<string, string>
+) {
   return {
     body,
     params: params ?? {},
@@ -106,9 +109,7 @@ describe('BookingController', () => {
       const req = makeReq({ movieId, seatId: 'A1', userId });
       const res = makeRes();
 
-      await expect(controller.create(req, res)).rejects.toThrow(
-        /not locked/
-      );
+      await expect(controller.create(req, res)).rejects.toThrow(/not locked/);
     });
 
     it('returns 400 on invalid input', async () => {
@@ -135,10 +136,7 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      await ctrl.create(
-        makeReq({ movieId, seatId: 'A1', userId }),
-        makeRes()
-      );
+      await ctrl.create(makeReq({ movieId, seatId: 'A1', userId }), makeRes());
 
       const req = makeReq({}, { movieId });
       const res = makeRes();
