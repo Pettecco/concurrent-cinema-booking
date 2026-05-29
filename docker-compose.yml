@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cinema_booking
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --notify-keyspace-events Ex
+    ports:
+      - '6379:6379'
+
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    environment:
+      REDIS_HOSTS: local
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+
+volumes:
+  pgdata:

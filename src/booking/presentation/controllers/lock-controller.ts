@@ -3,9 +3,13 @@ import { logger } from '../../../infra/http/logger.js';
 import { LockNotOwnedError } from '../../domain/errors.js';
 import type { ILockService } from '../../domain/lock-service.js';
 import { manipulateLockSchema } from '../schemas/lock.schema.js';
+import type { Broadcast } from '../../../infra/websocket/broadcast.js';
 
 export class LockController {
-  constructor(private readonly lockService: ILockService) {}
+  constructor(
+    private readonly lockService: ILockService,
+    private readonly broadcast: Broadcast
+  ) {}
 
   async acquire(req: Request, res: Response) {
     const input = manipulateLockSchema.safeParse(req.body);
@@ -47,6 +51,9 @@ export class LockController {
       { lockKey, userId, expiresAt: expiresAt.toISOString() },
       'Lock acquired successfully'
     );
+
+    this.broadcast.emitSeatLocked(movieId, seatId, userId, expiresAt);
+
     return res.status(200).json({
       success: true,
       lockKey,
@@ -76,6 +83,9 @@ export class LockController {
     try {
       await this.lockService.release(lockKey, userId);
       logger.info({ lockKey, userId }, 'Lock released successfully');
+
+      this.broadcast.emitSeatReleased(movieId, seatId);
+
       return res.status(204).send();
     } catch (error) {
       if (error instanceof LockNotOwnedError) {

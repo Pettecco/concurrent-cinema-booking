@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import { pinoHttp } from 'pino-http';
 import { BookingService } from './booking/application/booking-service.js';
 import { BookingController } from './booking/presentation/controllers/booking-controller.js';
@@ -14,15 +15,25 @@ import { logger } from './infra/http/logger.js';
 import { errorHandler } from './infra/http/error-handler.js';
 import { env } from './infra/env.js';
 import { HealthController } from './infra/http/health-controller.js';
+import { setupWebSocket } from './infra/websocket/server.js';
+import { createBroadcast } from './infra/websocket/broadcast.js';
+import { startKeyspaceListener } from './infra/websocket/keyspace-listener.js';
 
 const app = express();
 
 const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
 const bookingService = new BookingService(bookingRepository, lockService);
-const bookingController = new BookingController(bookingService);
-const lockController = new LockController(lockService);
 const healthController = new HealthController(db, redis);
+
+const httpServer = createServer(app);
+
+const io = await setupWebSocket(httpServer);
+const broadcast = createBroadcast(io);
+startKeyspaceListener(io);
+
+const bookingController = new BookingController(bookingService, broadcast);
+const lockController = new LockController(lockService, broadcast);
 
 app.use(cors());
 app.use(pinoHttp({ logger, autoLogging: false }));
@@ -34,6 +45,6 @@ app.get('/health', (req, res) => healthController.check(req, res));
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
+httpServer.listen(env.PORT, () => {
   logger.info(`Server running on port: ${env.PORT}`);
 });

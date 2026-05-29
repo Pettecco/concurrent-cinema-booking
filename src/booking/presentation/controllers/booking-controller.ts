@@ -4,9 +4,13 @@ import {
   createBookingSchema,
   listBookingSchema,
 } from '../schemas/booking.schema.js';
+import type { Broadcast } from '../../../infra/websocket/broadcast.js';
 
 export class BookingController {
-  constructor(private readonly service: BookingService) {}
+  constructor(
+    private readonly service: BookingService,
+    private readonly broadcast: Broadcast
+  ) {}
 
   async create(req: Request, res: Response) {
     const input = createBookingSchema.safeParse(req.body);
@@ -23,6 +27,8 @@ export class BookingController {
       userId,
       status: 'CONFIRMED',
     });
+
+    this.broadcast.emitSeatBooked(movieId, seatId, userId);
 
     return res.status(201).json(booking);
   }
