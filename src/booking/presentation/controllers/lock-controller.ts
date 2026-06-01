@@ -36,7 +36,9 @@ export class LockController {
       });
     }
 
-    this.broadcast.emitSeatLocked(roomId, seatId, userId);
+    const expiresAt = new Date(Date.now() + LOCK_TTL_MS);
+
+    this.broadcast.emitSeatLocked(roomId, seatId, userId, expiresAt);
 
     return res.status(201).json({
       message: 'Lock acquired',
@@ -44,7 +46,7 @@ export class LockController {
       showtimeId,
       seatId,
       userId,
-      expiresAt: Date.now() + LOCK_TTL_MS,
+      expiresAt: expiresAt.getTime(),
     });
   }
 
@@ -60,7 +62,7 @@ export class LockController {
     try {
       await this.lockService.release(lockKey, userId);
 
-      this.broadcast.emitSeatReleased(roomId, seatId, userId);
+      this.broadcast.emitSeatReleased(roomId, seatId);
 
       return res.status(200).json({
         message: 'Lock released',
