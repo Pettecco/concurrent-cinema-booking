@@ -26,6 +26,8 @@ import { roomRoutes } from './room/presentation/routes/room-routes.js';
 import { PostgresRoomRepository } from './room/repositories/postgres-room-repository.js';
 import { EmailService } from './application/services/email-service.js';
 import { emailWorker } from './infra/queues/email-queue.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './infra/http/swagger.js';
 
 const app = express();
 
@@ -63,6 +65,8 @@ app.use('/rooms', roomRoutes(roomController));
 logger.info('Email worker initialized');
 
 app.get('/health', (req, res) => healthController.check(req, res));
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
 
