@@ -4,34 +4,42 @@
 ### Room 1: 660e8400-e29b-41d4-a716-446655440001 (One Flew Over the Cuckoo's Nest)
 ### Room 2: 660e8400-e29b-41d4-a716-446655440002 (Moonlight)
 ### Room 3: 660e8400-e29b-41d4-a716-446655440003 (Aftersun)
+###
+### Showtime IDs:
+### Room 1 - 14:00: 8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873
+### Room 1 - 17:00: 0051fe90-304d-4bab-895c-9b403860895f
+### Room 2 - 15:00: 41d6f549-6b71-4fc6-97d2-072771a026e9
 
-### Adquirir lock - Assento A1 na Sala 1
+### Adquirir lock - Assento A1 na Sala 1 (14:00)
 POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
 
-### Tentar adquirir mesmo assento (deve falhar 409)
+### Tentar adquirir mesmo assento mesmo showtime (deve falhar 409)
 POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440200"
 }
 
-### Adquirir lock - Assento A2 na Sala 1 (diferente, deve sucesso)
+### Adquirir lock - MESMO assento DIFERENTE showtime 17:00 (deve sucesso)
 POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "seatId": "A2",
+  "showtimeId": "0051fe90-304d-4bab-895c-9b403860895f",
+  "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440200"
 }
 
@@ -41,6 +49,7 @@ Content-Type: application/json
 
 {
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
@@ -51,7 +60,8 @@ Content-Type: application/json
 
 {
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "seatId": "A2",
+  "showtimeId": "0051fe90-304d-4bab-895c-9b403860895f",
+  "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440999"
 }
 
