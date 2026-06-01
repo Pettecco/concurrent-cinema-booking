@@ -30,7 +30,6 @@ export class PostgresRoomRepository implements IRoomRepository {
       movieId: row.movie_id,
       totalSeats: row.total_seats,
       layout: row.layout,
-      showtimes: row.showtimes,
     };
   }
 }

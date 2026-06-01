@@ -6,7 +6,6 @@ export const roomSchema = z.object({
   movieId: z.uuid(),
   totalSeats: z.number().int().positive(),
   layout: z.string().optional(),
-  showtimes: z.array(z.string().regex(/^\d{2}:\d{2}$/)),
 });
 
 export const roomParamsSchema = z.object({
