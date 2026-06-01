@@ -4,5 +4,6 @@ export interface Booking {
   showtimeId: string;
   seatId: string;
   userId: string;
+  email: string;
   status: string;
 }
