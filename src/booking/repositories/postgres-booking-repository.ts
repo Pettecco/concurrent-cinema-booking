@@ -79,17 +79,19 @@ export class PostgresBookingRepository implements IBookingRepository {
           showtime_id: booking.showtimeId,
           seat_id: booking.seatId,
           user_id: booking.userId,
+          email: booking.email,
           status: booking.status,
         })
-        .returning('id');
+        .returning('*');
 
       return {
         id: inserted.id,
-        roomId: booking.roomId,
-        showtimeId: booking.showtimeId,
-        seatId: booking.seatId,
-        userId: booking.userId,
-        status: booking.status,
+        roomId: inserted.room_id,
+        showtimeId: inserted.showtime_id,
+        seatId: inserted.seat_id,
+        userId: inserted.user_id,
+        email: inserted.email,
+        status: inserted.status,
       };
     });
   }
