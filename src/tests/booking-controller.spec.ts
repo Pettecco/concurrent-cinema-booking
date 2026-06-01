@@ -35,25 +35,20 @@ function makeBroadcast() {
 }
 
 describe('BookingController', () => {
-  let service: BookingService;
   let broadcast: ReturnType<typeof makeBroadcast>;
-  let controller: BookingController;
 
   beforeEach(() => {
-    const repo = new MemoryBookingRepository();
-    const lockService = new MemoryLockService();
-    service = new BookingService(repo, lockService);
     broadcast = makeBroadcast();
-    controller = new BookingController(service, broadcast);
   });
 
   describe('create', () => {
     it('returns 201 with booking when lock is valid', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -61,7 +56,7 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId });
       const res = makeRes();
 
       await ctrl.create(req, res);
@@ -70,6 +65,7 @@ describe('BookingController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           roomId,
+          showtimeId,
           seatId: 'A1',
           userId,
           status: 'CONFIRMED',
@@ -79,10 +75,11 @@ describe('BookingController', () => {
 
     it('emits seat_booked event on success', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -90,7 +87,7 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId });
       const res = makeRes();
 
       await ctrl.create(req, res);
@@ -104,19 +101,34 @@ describe('BookingController', () => {
 
     it('throws SeatNotLockedError when no lock exists', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
+      const lockService = new MemoryLockService();
 
-      const req = makeReq({ roomId, seatId: 'A1', userId });
+      const svc = new BookingService(
+        new MemoryBookingRepository(),
+        lockService
+      );
+      const ctrl = new BookingController(svc, broadcast);
+
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId });
       const res = makeRes();
 
-      await expect(controller.create(req, res)).rejects.toThrow(/not locked/);
+      await expect(ctrl.create(req, res)).rejects.toThrow(/not locked/);
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad' });
+      const lockService = new MemoryLockService();
+      const svc = new BookingService(
+        new MemoryBookingRepository(),
+        lockService
+      );
+      const ctrl = new BookingController(svc, broadcast);
+
+      const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad', showtimeId: 'bad' });
       const res = makeRes();
 
-      await controller.create(req, res);
+      await ctrl.create(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
     });
@@ -125,10 +137,11 @@ describe('BookingController', () => {
   describe('listByRoom', () => {
     it('returns 200 with bookings array', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -136,7 +149,7 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      await ctrl.create(makeReq({ roomId, seatId: 'A1', userId }), makeRes());
+      await ctrl.create(makeReq({ roomId, showtimeId, seatId: 'A1', userId }), makeRes());
 
       const req = makeReq({}, { roomId: roomId });
       const res = makeRes();
@@ -148,10 +161,17 @@ describe('BookingController', () => {
     });
 
     it('returns 400 on invalid roomId', async () => {
+      const lockService = new MemoryLockService();
+      const svc = new BookingService(
+        new MemoryBookingRepository(),
+        lockService
+      );
+      const ctrl = new BookingController(svc, broadcast);
+
       const req = makeReq({}, { roomId: 'not-uuid' });
       const res = makeRes();
 
-      await controller.listByRoom(req, res);
+      await ctrl.listByRoom(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
     });

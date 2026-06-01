@@ -40,24 +40,26 @@ describe('LockController', () => {
   });
 
   describe('acquire', () => {
-    it('returns 200 with lock info when acquired', async () => {
+    it('returns 201 with lock info when acquired', async () => {
       const roomId = randomUUID();
-      const req = makeReq({ roomId, seatId: 'A1', userId: randomUUID() });
+      const showtimeId = randomUUID();
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId: randomUUID() });
       const res = makeRes();
 
       await controller.acquire(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true })
+        expect.objectContaining({ message: 'Lock acquired' })
       );
     });
 
     it('emits seat_locked event on success', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const seatId = 'A1';
       const userId = randomUUID();
-      const req = makeReq({ roomId, seatId, userId });
+      const req = makeReq({ roomId, showtimeId, seatId, userId });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -65,19 +67,19 @@ describe('LockController', () => {
       expect(broadcast.emitSeatLocked).toHaveBeenCalledWith(
         roomId,
         seatId,
-        userId,
-        expect.any(Date)
+        userId
       );
     });
 
     it('returns 409 when lock is already held', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId1 = randomUUID();
       const userId2 = randomUUID();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId1);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId1);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId: userId2 });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId: userId2 });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -85,13 +87,13 @@ describe('LockController', () => {
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.objectContaining({ code: 'SEAT_LOCKED' }),
+          message: 'Seat already locked',
         })
       );
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ roomId: 'not-uuid', seatId: 'A1', userId: 'bad' });
+      const req = makeReq({ roomId: 'not-uuid', showtimeId: 'bad', seatId: 'A1', userId: 'bad' });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -101,41 +103,44 @@ describe('LockController', () => {
   });
 
   describe('release', () => {
-    it('returns 204 when released successfully', async () => {
+    it('returns 200 when released successfully', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId });
       const res = makeRes();
 
       await controller.release(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(204);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('emits seat_released event on success', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId });
       const res = makeRes();
 
       await controller.release(req, res);
 
-      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(roomId, 'A1');
+      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(roomId, 'A1', userId);
     });
 
     it('returns 403 when user does not own the lock', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, userId);
 
-      const req = makeReq({ roomId, seatId: 'A1', userId: randomUUID() });
+      const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId: randomUUID() });
       const res = makeRes();
 
       await controller.release(req, res);
@@ -143,13 +148,13 @@ describe('LockController', () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.objectContaining({ code: 'LOCK_NOT_OWNED' }),
+          message: 'Lock not owned by user',
         })
       );
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad' });
+      const req = makeReq({ roomId: 'bad', showtimeId: 'bad', seatId: '', userId: 'bad' });
       const res = makeRes();
 
       await controller.release(req, res);
