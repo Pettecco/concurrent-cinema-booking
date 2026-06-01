@@ -5,6 +5,8 @@ import type { ILockService } from '../../domain/lock-service.js';
 import { manipulateLockSchema } from '../schemas/lock.schema.js';
 import type { Broadcast } from '../../../infra/websocket/broadcast.js';
 
+const LOCK_TTL_MS = 300000; // 5 minutes
+
 export class LockController {
   constructor(
     private readonly lockService: ILockService,
@@ -14,90 +16,68 @@ export class LockController {
   async acquire(req: Request, res: Response) {
     const input = manipulateLockSchema.safeParse(req.body);
     if (!input.success) {
-      logger.warn(
-        {
-          roomId: req.body?.roomId,
-          seatId: req.body?.seatId,
-          errors: input.error.issues,
-        },
-        'Lock acquisition failed validation'
-      );
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { roomId, seatId, userId } = input.data;
-    const lockKey = `lock:${roomId}:${seatId}`;
-    const ttlMS = 300000;
+    const { roomId, showtimeId, seatId, userId } = input.data;
+    const lockKey = `lock:${roomId}:${showtimeId}:${seatId}`;
 
-    logger.info({ lockKey, userId }, 'Attempting to acquire lock');
-
-    const acquired = await this.lockService.acquire(lockKey, ttlMS, userId);
+    const acquired = await this.lockService.acquire(
+      lockKey,
+      LOCK_TTL_MS,
+      userId
+    );
 
     if (!acquired) {
-      logger.warn(
-        { lockKey, userId, roomId, seatId },
-        'Lock already acquired by another user'
-      );
       return res.status(409).json({
-        error: {
-          code: 'SEAT_LOCKED',
-          message: `Seat ${seatId} is already locked`,
-        },
+        message: 'Seat already locked',
+        roomId,
+        showtimeId,
+        seatId,
       });
     }
 
-    const expiresAt = new Date(Date.now() + ttlMS);
-    logger.info(
-      { lockKey, userId, expiresAt: expiresAt.toISOString() },
-      'Lock acquired successfully'
-    );
+    this.broadcast.emitSeatLocked(roomId, seatId, userId);
 
-    this.broadcast.emitSeatLocked(roomId, seatId, userId, expiresAt);
-
-    return res.status(200).json({
-      success: true,
-      lockKey,
-      expiresAt,
+    return res.status(201).json({
+      message: 'Lock acquired',
+      roomId,
+      showtimeId,
+      seatId,
+      userId,
+      expiresAt: Date.now() + LOCK_TTL_MS,
     });
   }
 
   async release(req: Request, res: Response) {
     const input = manipulateLockSchema.safeParse(req.body);
     if (!input.success) {
-      logger.warn(
-        {
-          roomId: req.body?.roomId,
-          seatId: req.body?.seatId,
-          errors: input.error.issues,
-        },
-        'Lock release failed validation'
-      );
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { roomId, seatId, userId } = input.data;
-    const lockKey = `lock:${roomId}:${seatId}`;
-
-    logger.info({ lockKey, userId }, 'Attempting to release lock');
+    const { roomId, showtimeId, seatId, userId } = input.data;
+    const lockKey = `lock:${roomId}:${showtimeId}:${seatId}`;
 
     try {
       await this.lockService.release(lockKey, userId);
-      logger.info({ lockKey, userId }, 'Lock released successfully');
 
-      this.broadcast.emitSeatReleased(roomId, seatId);
+      this.broadcast.emitSeatReleased(roomId, seatId, userId);
 
-      return res.status(204).send();
+      return res.status(200).json({
+        message: 'Lock released',
+        roomId,
+        showtimeId,
+        seatId,
+        userId,
+      });
     } catch (error) {
       if (error instanceof LockNotOwnedError) {
-        logger.warn(
-          { lockKey, userId, roomId, seatId },
-          'User attempted to release lock they do not own'
-        );
         return res.status(403).json({
-          error: {
-            code: 'LOCK_NOT_OWNED',
-            message: error.message,
-          },
+          message: 'Lock not owned by user',
+          roomId,
+          showtimeId,
+          seatId,
+          userId,
         });
       }
       throw error;

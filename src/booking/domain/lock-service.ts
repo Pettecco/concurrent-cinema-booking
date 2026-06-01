@@ -1,7 +1,7 @@
 export interface ILockService {
   /**
    * Attempts to acquire a lock with a specified TTL.
-   * @param key - The lock key (e.g., "lock:roomId:seatId")
+   * @param key - The lock key (e.g., "lock:roomId:showtimeId:seatId")
    * @param ttlMS - Time to live in milliseconds
    * @param userId - ID of the user acquiring the lock
    * @returns true if lock was acquired, false if already held by another user
