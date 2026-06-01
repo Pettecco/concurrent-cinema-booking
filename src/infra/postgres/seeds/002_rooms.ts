@@ -1,8 +1,6 @@
 import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
-  await knex('rooms').del();
-  await knex('showtimes').del();
 
   await knex('rooms').insert([
     {
@@ -30,19 +28,19 @@ export async function seed(knex: Knex): Promise<void> {
 
   await knex('showtimes').insert([
     {
-      id: knex.raw('gen_random_uuid()'),
+      id: '8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873',
       room_id: '660e8400-e29b-41d4-a716-446655440001',
       start_time: '14:00',
       end_time: '16:00',
     },
     {
-      id: knex.raw('gen_random_uuid()'),
+      id: '8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae874',
       room_id: '660e8400-e29b-41d4-a716-446655440001',
       start_time: '17:00',
       end_time: '19:00',
     },
     {
-      id: knex.raw('gen_random_uuid()'),
+      id: '8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae875',
       room_id: '660e8400-e29b-41d4-a716-446655440001',
       start_time: '20:00',
       end_time: '22:00',

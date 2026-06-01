@@ -20,20 +20,25 @@ export class BookingController {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { roomId, showtimeId, seatId, userId } = input.data;
+    const { roomId, showtimeId, seatId, userId, email } = input.data;
 
     const booking = await this.service.book({
       roomId,
       showtimeId,
       seatId,
       userId,
+      email,
       status: 'CONFIRMED',
     });
 
     this.broadcast.emitSeatBooked(roomId, seatId, userId);
 
     const bookingDetails = await this.service.getBookingDetails(booking.id);
-    await this.emailService.sendBookingConfirmation(userId, bookingDetails);
+
+    await this.emailService.sendBookingConfirmation(
+      booking.email,
+      bookingDetails
+    );
 
     return res.status(201).json(booking);
   }
