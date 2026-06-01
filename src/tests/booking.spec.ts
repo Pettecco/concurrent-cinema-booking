@@ -9,10 +9,11 @@ import {
   LockNotOwnedError,
 } from '../booking/domain/errors.js';
 
-function makeBooking(overrides?: { userId?: string; seatId?: string }) {
+function makeBooking(overrides?: { userId?: string; seatId?: string; showtimeId?: string }) {
   return {
     id: randomUUID(),
     roomId: randomUUID(),
+    showtimeId: overrides?.showtimeId ?? randomUUID(),
     seatId: overrides?.seatId ?? 'A1',
     userId: overrides?.userId ?? randomUUID(),
     status: 'CONFIRMED',
@@ -33,12 +34,9 @@ describe('BookingService', () => {
   describe('book', () => {
     it('creates a booking when user has valid lock', async () => {
       const booking = makeBooking();
+      const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
 
-      await lockService.acquire(
-        `lock:${booking.roomId}:${booking.seatId}`,
-        300_000,
-        booking.userId
-      );
+      await lockService.acquire(lockKey, 300_000, booking.userId);
 
       const result = await service.book(booking);
 
@@ -57,7 +55,7 @@ describe('BookingService', () => {
       const booking = makeBooking();
 
       await lockService.acquire(
-        `lock:${booking.roomId}:${booking.seatId}`,
+        `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`,
         300_000,
         'another-user-id'
       );
@@ -65,15 +63,16 @@ describe('BookingService', () => {
       await expect(service.book(booking)).rejects.toThrow(SeatNotLockedError);
     });
 
-    it('throws SeatAlreadyBookedError when seat is already booked', async () => {
+    it('throws SeatAlreadyBookedError when seat is already booked for same showtime', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const seatId = 'A1';
 
-      const booking = makeBooking({ seatId });
+      const booking = makeBooking({ seatId, showtimeId });
       booking.roomId = roomId;
 
       await lockService.acquire(
-        `lock:${roomId}:${seatId}`,
+        `lock:${roomId}:${showtimeId}:${seatId}`,
         300_000,
         booking.userId
       );
@@ -82,12 +81,12 @@ describe('BookingService', () => {
 
       const secondUserId = randomUUID();
       await lockService.acquire(
-        `lock:${roomId}:${seatId}`,
+        `lock:${roomId}:${showtimeId}:${seatId}`,
         300_000,
         secondUserId
       );
 
-      const secondBooking = makeBooking({ seatId, userId: secondUserId });
+      const secondBooking = makeBooking({ seatId, userId: secondUserId, showtimeId });
       secondBooking.roomId = roomId;
 
       await expect(service.book(secondBooking)).rejects.toThrow(
@@ -97,7 +96,7 @@ describe('BookingService', () => {
 
     it('releases lock after successful booking', async () => {
       const booking = makeBooking();
-      const lockKey = `lock:${booking.roomId}:${booking.seatId}`;
+      const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
 
       await lockService.acquire(lockKey, 300_000, booking.userId);
       await service.book(booking);
@@ -106,28 +105,31 @@ describe('BookingService', () => {
       expect(stillLocked).toBe(false);
     });
 
-    it('allows different users to book different seats for the same movie', async () => {
+    it('allows different users to book different seats for the same showtime', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
 
-      const booking1 = makeBooking({ seatId: 'A1' });
+      const booking1 = makeBooking({ seatId: 'A1', showtimeId });
       booking1.roomId = roomId;
 
-      const booking2 = makeBooking({ seatId: 'A2' });
+      const booking2 = makeBooking({ seatId: 'A2', showtimeId });
       booking2.roomId = roomId;
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, booking1.userId);
-      await lockService.acquire(`lock:${roomId}:A2`, 300_000, booking2.userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, booking1.userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A2`, 300_000, booking2.userId);
 
       const result1 = await service.book(booking1);
       const result2 = await service.book(booking2);
 
       expect(result1.seatId).toBe('A1');
       expect(result2.seatId).toBe('A2');
+      expect(result1.showtimeId).toBe(showtimeId);
+      expect(result2.showtimeId).toBe(showtimeId);
     });
 
     it('throws LockNotOwnedError when releasing a lock owned by another user', async () => {
       const booking = makeBooking();
-      const lockKey = `lock:${booking.roomId}:${booking.seatId}`;
+      const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
 
       await lockService.acquire(lockKey, 300_000, booking.userId);
 
@@ -138,17 +140,18 @@ describe('BookingService', () => {
   });
 
   describe('listBookings', () => {
-    it('returns all bookings for a movie', async () => {
+    it('returns all bookings for a room', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
 
-      const booking1 = makeBooking({ seatId: 'A1' });
+      const booking1 = makeBooking({ seatId: 'A1', showtimeId });
       booking1.roomId = roomId;
 
-      const booking2 = makeBooking({ seatId: 'A2' });
+      const booking2 = makeBooking({ seatId: 'A2', showtimeId });
       booking2.roomId = roomId;
 
-      await lockService.acquire(`lock:${roomId}:A1`, 300_000, booking1.userId);
-      await lockService.acquire(`lock:${roomId}:A2`, 300_000, booking2.userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A1`, 300_000, booking1.userId);
+      await lockService.acquire(`lock:${roomId}:${showtimeId}:A2`, 300_000, booking2.userId);
 
       await service.book(booking1);
       await service.book(booking2);
@@ -169,6 +172,7 @@ describe('BookingService', () => {
   describe('concurrent bookings', () => {
     it('exactly one succeeds when 100 users try to book the same seat', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const seatId = 'A1';
       const concurrency = 100;
 
@@ -179,7 +183,7 @@ describe('BookingService', () => {
       await Promise.all(
         Array.from({ length: concurrency }, async () => {
           const userId = randomUUID();
-          const lockKey = `lock:${roomId}:${seatId}`;
+          const lockKey = `lock:${roomId}:${showtimeId}:${seatId}`;
 
           try {
             const acquired = await lockService.acquire(
@@ -195,6 +199,7 @@ describe('BookingService', () => {
             await service.book({
               id: randomUUID(),
               roomId,
+              showtimeId,
               seatId,
               userId,
               status: 'CONFIRMED',
@@ -216,18 +221,20 @@ describe('BookingService', () => {
 
     it('different seats can be booked concurrently without conflicts', async () => {
       const roomId = randomUUID();
+      const showtimeId = randomUUID();
       const seats = ['A1', 'A2', 'A3', 'A4', 'A5'];
 
       const results = await Promise.all(
         seats.map(async seatId => {
           const userId = randomUUID();
-          const lockKey = `lock:${roomId}:${seatId}`;
+          const lockKey = `lock:${roomId}:${showtimeId}:${seatId}`;
 
           await lockService.acquire(lockKey, 300_000, userId);
 
           return service.book({
             id: randomUUID(),
             roomId,
+            showtimeId,
             seatId,
             userId,
             status: 'CONFIRMED',
