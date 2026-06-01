@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
   await knex('rooms').del();
+  await knex('showtimes').del();
 
   await knex('rooms').insert([
     {
@@ -10,7 +11,6 @@ export async function seed(knex: Knex): Promise<void> {
       movie_id: '550e8400-e29b-41d4-a716-446655440001',
       total_seats: 25,
       layout: '5x5',
-      showtimes: JSON.stringify(['14:00', '17:00', '20:00']),
     },
     {
       id: '660e8400-e29b-41d4-a716-446655440002',
@@ -18,7 +18,6 @@ export async function seed(knex: Knex): Promise<void> {
       movie_id: '550e8400-e29b-41d4-a716-446655440002',
       total_seats: 20,
       layout: '4x5',
-      showtimes: JSON.stringify(['15:00', '18:00', '21:00']),
     },
     {
       id: '660e8400-e29b-41d4-a716-446655440003',
@@ -26,7 +25,63 @@ export async function seed(knex: Knex): Promise<void> {
       movie_id: '550e8400-e29b-41d4-a716-446655440003',
       total_seats: 15,
       layout: '3x5',
-      showtimes: JSON.stringify(['16:00', '19:00', '22:00']),
+    },
+  ]);
+
+  await knex('showtimes').insert([
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440001',
+      start_time: '14:00',
+      end_time: '16:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440001',
+      start_time: '17:00',
+      end_time: '19:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440001',
+      start_time: '20:00',
+      end_time: '22:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440002',
+      start_time: '15:00',
+      end_time: '17:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440002',
+      start_time: '18:00',
+      end_time: '20:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440002',
+      start_time: '21:00',
+      end_time: '23:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440003',
+      start_time: '16:00',
+      end_time: '18:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440003',
+      start_time: '19:00',
+      end_time: '21:00',
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      room_id: '660e8400-e29b-41d4-a716-446655440003',
+      start_time: '22:00',
+      end_time: '00:00',
     },
   ]);
 }
