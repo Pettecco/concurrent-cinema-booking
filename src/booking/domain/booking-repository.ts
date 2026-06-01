@@ -3,10 +3,10 @@ import type { Booking } from './booking.js';
 export interface IBookingRepository {
   /**
    * Creates a new booking if the seat is available.
-   * @param booking - The booking to create
+   * @param booking - The booking to create (without id)
    * @returns The created booking, or null if the seat is already booked
    */
-  book(booking: Booking): Promise<Booking | null>;
+  book(booking: Omit<Booking, 'id'>): Promise<Booking | null>;
 
   /**
    * Finds all bookings for a specific room.

@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { logger } from '../../../infra/http/logger.js';
 import { LockNotOwnedError } from '../../domain/errors.js';
 import type { ILockService } from '../../domain/lock-service.js';
 import { manipulateLockSchema } from '../schemas/lock.schema.js';
