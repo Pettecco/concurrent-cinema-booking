@@ -1,10 +1,12 @@
-import type { Router } from 'express';
+import { Router } from 'express';
 import type { RoomController } from '../controllers/room-controller.js';
 
-export function roomRoutes(router: Router, controller: RoomController) {
-  router.get('/rooms', (req, res) => controller.findAll(req, res));
-  router.get('/rooms/:id', (req, res) => controller.findById(req, res));
-  router.get('/movies/:movieId/room', (req, res) =>
-    controller.findByMovie(req, res)
-  );
+export function roomRoutes(controller: RoomController): Router {
+  const router = Router();
+
+  router.get('/', (req, res) => controller.findAll(req, res));
+  router.get('/:id', (req, res) => controller.findById(req, res));
+  router.get('/movie/:movieId', (req, res) => controller.findByMovie(req, res));
+
+  return router;
 }

@@ -18,6 +18,12 @@ import { HealthController } from './infra/http/health-controller.js';
 import { setupWebSocket } from './infra/websocket/server.js';
 import { createBroadcast } from './infra/websocket/broadcast.js';
 import { startKeyspaceListener } from './infra/websocket/keyspace-listener.js';
+import { MovieController } from './movie/presentation/controllers/movie-controller.js';
+import { movieRoutes } from './movie/presentation/routes/movie-routes.js';
+import { PostgresMovieRepository } from './movie/repositories/postgres-movie-repository.js';
+import { RoomController } from './room/presentation/controllers/room-controller.js';
+import { roomRoutes } from './room/presentation/routes/room-routes.js';
+import { PostgresRoomRepository } from './room/repositories/postgres-room-repository.js';
 
 const app = express();
 
@@ -25,6 +31,10 @@ const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
 const bookingService = new BookingService(bookingRepository, lockService);
 const healthController = new HealthController(db, redis);
+const movieRepository = new PostgresMovieRepository(db);
+const movieController = new MovieController(movieRepository);
+const roomRepository = new PostgresRoomRepository(db);
+const roomController = new RoomController(roomRepository);
 
 const httpServer = createServer(app);
 
@@ -40,6 +50,8 @@ app.use(pinoHttp({ logger, autoLogging: false }));
 app.use(express.json());
 app.use('/bookings', bookingRoutes(bookingController));
 app.use('/locks', lockRoutes(lockController));
+app.use('/movies', movieRoutes(movieController));
+app.use('/rooms', roomRoutes(roomController));
 
 app.get('/health', (req, res) => healthController.check(req, res));
 

@@ -1,7 +1,11 @@
-import type { Router } from 'express';
+import { Router } from 'express';
 import type { MovieController } from '../controllers/movie-controller.js';
 
-export function movieRoutes(router: Router, controller: MovieController) {
-  router.get('/movies', (req, res) => controller.findAll(req, res));
-  router.get('/movies/:id', (req, res) => controller.findById(req, res));
+export function movieRoutes(controller: MovieController): Router {
+  const router = Router();
+
+  router.get('/', (req, res) => controller.findAll(req, res));
+  router.get('/:id', (req, res) => controller.findById(req, res));
+
+  return router;
 }
