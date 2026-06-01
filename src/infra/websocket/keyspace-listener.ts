@@ -2,6 +2,7 @@ import type { Server } from 'socket.io';
 import { Redis } from 'ioredis';
 import { env } from '../env.js';
 import { logger } from '../http/logger.js';
+import { auditQueue } from '../queues/audit-queue.js';
 
 export function startKeyspaceListener(io: Server) {
   const subscriber = new Redis({
@@ -15,10 +16,12 @@ export function startKeyspaceListener(io: Server) {
     if (!key.startsWith('lock:')) return;
 
     const parts = key.split(':');
-    if (parts.length < 3) return;
+    if (parts.length < 5) return;
 
     const roomId = parts[1]!;
-    const seatId = parts[2]!;
+    const showtimeId = parts[2]!;
+    const seatId = parts[3]!;
+    const userId = parts[4]!;
 
     logger.info(
       { roomId, seatId, key },
@@ -29,6 +32,13 @@ export function startKeyspaceListener(io: Server) {
       type: 'lock_expired',
       roomId,
       seatId,
+    });
+
+    auditQueue.add('audit-event', {
+      eventType: 'lock.expired',
+      payload: { roomId, showtimeId, seatId, userId, reason: 'ttl_expired' },
+    }).catch((err) => {
+      logger.error({ err }, 'Failed to enqueue lock.expired audit event');
     });
   });
 

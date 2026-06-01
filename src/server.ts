@@ -26,8 +26,10 @@ import { roomRoutes } from './room/presentation/routes/room-routes.js';
 import { PostgresRoomRepository } from './room/repositories/postgres-room-repository.js';
 import { EmailService } from './application/services/email-service.js';
 import { emailWorker } from './infra/queues/email-queue.js';
+import { auditWorker } from './infra/queues/audit-queue.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './infra/http/swagger.js';
+import { AuditService } from './audit/application/audit-service.js';
 
 const app = express();
 
@@ -35,6 +37,7 @@ const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
 const bookingService = new BookingService(bookingRepository, lockService);
 const emailService = new EmailService();
+const auditService = new AuditService();
 const healthController = new HealthController(db, redis);
 const movieRepository = new PostgresMovieRepository(db);
 const movieController = new MovieController(movieRepository);
@@ -50,9 +53,10 @@ startKeyspaceListener(io);
 const bookingController = new BookingController(
   bookingService,
   broadcast,
-  emailService
+  emailService,
+  auditService
 );
-const lockController = new LockController(lockService, broadcast);
+const lockController = new LockController(lockService, broadcast, auditService);
 
 app.use(cors());
 app.use(pinoHttp({ logger, autoLogging: false }));

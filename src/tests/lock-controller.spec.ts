@@ -28,15 +28,23 @@ function makeBroadcast() {
     : never;
 }
 
+function makeAuditService() {
+  return {
+    emit: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('LockController', () => {
   let lockService: MemoryLockService;
   let broadcast: ReturnType<typeof makeBroadcast>;
+  let auditService: ReturnType<typeof makeAuditService>;
   let controller: LockController;
 
   beforeEach(() => {
     lockService = new MemoryLockService();
     broadcast = makeBroadcast();
-    controller = new LockController(lockService, broadcast);
+    auditService = makeAuditService();
+    controller = new LockController(lockService, broadcast, auditService as any);
   });
 
   describe('acquire', () => {

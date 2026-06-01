@@ -6,12 +6,14 @@ import {
 } from '../schemas/booking.schema.js';
 import type { Broadcast } from '../../../infra/websocket/broadcast.js';
 import { EmailService } from '../../../application/services/email-service.js';
+import { AuditService } from '../../../audit/application/audit-service.js';
 
 export class BookingController {
   constructor(
     private readonly service: BookingService,
     private readonly broadcast: Broadcast,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly auditService: AuditService
   ) {}
 
   async create(req: Request, res: Response) {
@@ -22,25 +24,46 @@ export class BookingController {
 
     const { roomId, showtimeId, seatId, userId, email } = input.data;
 
-    const booking = await this.service.book({
-      roomId,
-      showtimeId,
-      seatId,
-      userId,
-      email,
-      status: 'CONFIRMED',
-    });
+    try {
+      const booking = await this.service.book({
+        roomId,
+        showtimeId,
+        seatId,
+        userId,
+        email,
+        status: 'CONFIRMED',
+      });
 
-    this.broadcast.emitSeatBooked(roomId, seatId, userId);
+      this.broadcast.emitSeatBooked(roomId, seatId, userId);
 
-    const bookingDetails = await this.service.getBookingDetails(booking.id);
+      await this.auditService.emit('booking.created', {
+        bookingId: booking.id,
+        roomId,
+        showtimeId,
+        seatId,
+        userId,
+        email,
+      });
 
-    await this.emailService.sendBookingConfirmation(
-      booking.email,
-      bookingDetails
-    );
+      const bookingDetails = await this.service.getBookingDetails(booking.id);
 
-    return res.status(201).json(booking);
+      await this.emailService.sendBookingConfirmation(
+        booking.email,
+        bookingDetails
+      );
+
+      return res.status(201).json(booking);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown';
+      await this.auditService.emit('booking.failed', {
+        roomId,
+        showtimeId,
+        seatId,
+        userId,
+        reason,
+      });
+      throw error;
+    }
   }
 
   async listByRoom(req: Request, res: Response) {

@@ -40,13 +40,21 @@ function makeEmailService() {
   };
 }
 
+function makeAuditService() {
+  return {
+    emit: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('BookingController', () => {
   let broadcast: ReturnType<typeof makeBroadcast>;
   let emailService: ReturnType<typeof makeEmailService>;
+  let auditService: ReturnType<typeof makeAuditService>;
 
   beforeEach(() => {
     broadcast = makeBroadcast();
     emailService = makeEmailService();
+    auditService = makeAuditService();
   });
 
   describe('create', () => {
@@ -63,7 +71,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId, email });
       const res = makeRes();
@@ -96,7 +104,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId, email });
       const res = makeRes();
@@ -121,7 +129,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       const req = makeReq({ roomId, showtimeId, seatId: 'A1', userId, email });
       const res = makeRes();
@@ -135,7 +143,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad', showtimeId: 'bad', email: 'bad' });
       const res = makeRes();
@@ -160,7 +168,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       await ctrl.create(makeReq({ roomId, showtimeId, seatId: 'A1', userId, email }), makeRes());
 
@@ -179,7 +187,7 @@ describe('BookingController', () => {
         new MemoryBookingRepository(),
         lockService
       );
-      const ctrl = new BookingController(svc, broadcast, emailService as any);
+      const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
       const req = makeReq({}, { roomId: 'not-uuid' });
       const res = makeRes();

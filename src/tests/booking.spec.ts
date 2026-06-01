@@ -199,11 +199,11 @@ describe('BookingService', () => {
             }
 
             await service.book({
-              id: randomUUID(),
               roomId,
               showtimeId,
               seatId,
               userId,
+              email: 'user@example.com',
               status: 'CONFIRMED',
             });
             success++;
@@ -234,11 +234,11 @@ describe('BookingService', () => {
           await lockService.acquire(lockKey, 300_000, userId);
 
           return service.book({
-            id: randomUUID(),
             roomId,
             showtimeId,
             seatId,
             userId,
+            email: 'user@example.com',
             status: 'CONFIRMED',
           });
         })

@@ -1,0 +1,129 @@
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+# ============================================================
+# Health Check
+# ============================================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+# ============================================================
+# Movies
+# ============================================================
+
+### List all movies
+GET {{baseUrl}}/movies
+
+### Get movie by ID
+GET {{baseUrl}}/movies/550e8400-e29b-41d4-a716-446655440001
+
+# ============================================================
+# Rooms
+# ============================================================
+
+### List all rooms
+GET {{baseUrl}}/rooms
+
+### Get room by ID
+GET {{baseUrl}}/rooms/660e8400-e29b-41d4-a716-446655440001
+
+### Get room by movie ID
+GET {{baseUrl}}/rooms/movie/550e8400-e29b-41d4-a716-446655440001
+
+# ============================================================
+# Locks
+# ============================================================
+
+### Acquire seat lock (5 minutes TTL)
+# @name acquireLock
+POST {{baseUrl}}/locks/acquire
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### Release seat lock
+POST {{baseUrl}}/locks/release
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
+}
+
+### Acquire lock - conflict test (same seat, different user)
+POST {{baseUrl}}/locks/acquire
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440200"
+}
+
+### Release lock - forbidden test (wrong user)
+POST {{baseUrl}}/locks/release
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440999"
+}
+
+# ============================================================
+# Bookings
+# ============================================================
+
+### Create booking (requires active lock)
+# @name createBooking
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "A1",
+  "userId": "550e8400-e29b-41d4-a716-446655440100",
+  "email": "user@cinema.com"
+}
+
+### List bookings by room
+GET {{baseUrl}}/bookings/660e8400-e29b-41d4-a716-446655440001
+
+### Create booking - no lock (should fail 400)
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
+  "seatId": "B2",
+  "userId": "550e8400-e29b-41d4-a716-446655440100",
+  "email": "user@cinema.com"
+}
+
+### Create booking - invalid body (should fail 400)
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "roomId": "invalid",
+  "seatId": ""
+}
+
+# ============================================================
+# Swagger Documentation
+# ============================================================
+
+### OpenAPI Swagger UI
+GET {{baseUrl}}/docs

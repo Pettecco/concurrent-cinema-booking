@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
-  await knex.schema.createTable('showtimes', table => {
+  await knex.schema.createTable('showtimes', (table) => {
     table.uuid('id').primary();
     table.uuid('room_id').notNullable();
     table.time('start_time').notNullable();
@@ -31,7 +31,7 @@ export async function up(knex: Knex): Promise<void> {
 
     for (const startTime of times) {
       const [hours, minutes] = startTime.split(':').map(Number);
-      const startMinutes = hours * 60 + minutes;
+      const startMinutes = hours! * 60 + minutes!;
       const endMinutes = startMinutes + duration;
       const endHours = Math.floor(endMinutes / 60);
       const endMins = endMinutes % 60;
@@ -48,13 +48,13 @@ export async function up(knex: Knex): Promise<void> {
     }
   }
 
-  await knex.schema.alterTable('rooms', table => {
+  await knex.schema.alterTable('rooms', (table) => {
     table.dropColumn('showtimes');
   });
 }
 
 export async function down(knex: Knex): Promise<void> {
-  await knex.schema.alterTable('rooms', table => {
+  await knex.schema.alterTable('rooms', (table) => {
     table.jsonb('showtimes').notNullable().defaultTo('[]');
   });
 
