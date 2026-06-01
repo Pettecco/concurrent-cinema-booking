@@ -285,6 +285,16 @@ Todas as instâncias respeitam o mesmo lock.
   └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Documentação da API (Swagger UI)
+
+A API é documentada com **Swagger UI** e está disponível em:
+
+```
+http://localhost:3000/docs
+```
+
+![Swagger UI Documentation](src/infra/http/swagger.png)
+
 ## Tecnologias
 
 | Tecnologia                                                                                                               | Versão | Descrição          |
@@ -392,25 +402,11 @@ pnpm cleanup  # limpa banco e Redis
 
 - Usuário 1 pode travar `A1` às **14:00**
 - Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
+- Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
 
 ## Envio de E-mail
 
 O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usando **BullMQ** + **Mailhog**.
-
-### Fluxo
-
-```
-┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
-│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
-└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
-                                                          │
-                                                          │ async
-                                                          ▼
-                                                   ┌─────────────┐
-                                                   │  Mailhog    │
-                                                   │  (SMTP)     │
-                                                   └─────────────┘
-```
 
 ### Serviços
 
@@ -435,116 +431,3 @@ SMTP_HOST=localhost
 SMTP_PORT=1025
 EMAIL_FROM=Cinema <noreply@cinema.com>
 ```
-
-- Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
-
-## 📚 Documentação da API (Swagger UI)
-
-A API é documentada com **Swagger UI** e está disponível em:
-
-```
-http://localhost:3000/docs
-```
-
-![Swagger UI Documentation](src/infra/http/swagger.png)
-
-### Endpoints Disponíveis
-
-#### 🔒 Locks
-
-| Método | Endpoint          | Descrição                        |
-| ------ | ----------------- | -------------------------------- |
-| POST   | `/locks/acquire`  | Adquire lock de um assento       |
-| POST   | `/locks/release`  | Libera lock de um assento        |
-
-#### 🎫 Bookings
-
-| Método | Endpoint          | Descrição                        |
-| ------ | ----------------- | -------------------------------- |
-| POST   | `/bookings`       | Cria uma nova reserva            |
-| GET    | `/bookings/:roomId` | Lista todas as reservas de uma sala |
-
-#### 🎬 Movies
-
-| Método | Endpoint      | Descrição                  |
-| ------ | ------------- | -------------------------- |
-| GET    | `/movies`     | Lista todos os filmes      |
-| GET    | `/movies/:id` | Busca filme por ID         |
-
-#### 🏠 Rooms
-
-| Método | Endpoint           | Descrição                    |
-| ------ | ------------------ | ---------------------------- |
-| GET    | `/rooms`           | Lista todas as salas         |
-| GET    | `/rooms/:id`       | Busca sala por ID            |
-| GET    | `/rooms/movie/:movieId` | Busca sala por filme   |
-
-#### ❤️ Health
-
-| Método | Endpoint  | Descrição                  |
-| ------ | --------- | -------------------------- |
-| GET    | `/health` | Health check (Postgres + Redis) |
-
-### Exemplo de Request/Response
-
-#### POST /locks/acquire
-
-**Request:**
-```json
-{
-  "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100"
-}
-```
-
-**Response (201):**
-```json
-{
-  "message": "Lock acquired",
-  "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100",
-  "expiresAt": 1717257600000
-}
-```
-
-#### POST /bookings
-
-**Request:**
-```json
-{
-  "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100",
-  "email": "user@cinema.com"
-}
-```
-
-**Response (201):**
-```json
-{
-  "id": "a3f8c2d1-5e7b-4f9a-8c6d-1b2e3f4a5b6c",
-  "roomId": "660e8400-e29b-41d4-a716-446655440001",
-  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100",
-  "email": "user@cinema.com",
-  "status": "CONFIRMED"
-}
-```
-
-### Códigos de Status HTTP
-
-| Código | Descrição                           |
-| ------ | ----------------------------------- |
-| 200    | Sucesso                             |
-| 201    | Recurso criado com sucesso          |
-| 400    | Requisição inválida (validation)    |
-| 403    | Proibido (lock não pertence ao usuário) |
-| 404    | Recurso não encontrado              |
-| 409    | Conflito (assento já travado/reservado) |
-| 503    | Serviço indisponível (health check) |
