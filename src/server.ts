@@ -35,7 +35,7 @@ const app = express();
 
 const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
-const bookingService = new BookingService(bookingRepository, lockService);
+const bookingService = new BookingService(bookingRepository, lockService, logger);
 const emailService = new EmailService();
 const auditService = new AuditService();
 const healthController = new HealthController(db, redis);

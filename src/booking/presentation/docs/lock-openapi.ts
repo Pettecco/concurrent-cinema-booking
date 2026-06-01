@@ -1,7 +1,7 @@
 import type { OpenAPIV3 } from 'openapi-types';
 
 export const lockDocs: OpenAPIV3.PathsObject = {
-  '/locks/acquire': {
+  '/locks': {
     post: {
       summary: 'Acquire seat lock',
       description: 'Locks a seat for 5 minutes. User must release or it expires automatically.',
@@ -36,9 +36,7 @@ export const lockDocs: OpenAPIV3.PathsObject = {
         409: { description: 'Seat already locked' },
       },
     },
-  },
-  '/locks/release': {
-    post: {
+    delete: {
       summary: 'Release seat lock',
       description: 'Releases a lock on a seat. Only the user who acquired the lock can release it.',
       tags: ['Locks'],

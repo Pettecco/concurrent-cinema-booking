@@ -34,6 +34,15 @@ function makeBroadcast() {
   } as unknown as Broadcast;
 }
 
+function makeLogger() {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+}
+
 function makeEmailService() {
   return {
     sendBookingConfirmation: vi.fn().mockResolvedValue(undefined),
@@ -50,11 +59,13 @@ describe('BookingController', () => {
   let broadcast: ReturnType<typeof makeBroadcast>;
   let emailService: ReturnType<typeof makeEmailService>;
   let auditService: ReturnType<typeof makeAuditService>;
+  let logger: ReturnType<typeof makeLogger>;
 
   beforeEach(() => {
     broadcast = makeBroadcast();
     emailService = makeEmailService();
     auditService = makeAuditService();
+    logger = makeLogger();
   });
 
   describe('create', () => {
@@ -69,7 +80,8 @@ describe('BookingController', () => {
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
@@ -102,7 +114,8 @@ describe('BookingController', () => {
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
@@ -127,7 +140,8 @@ describe('BookingController', () => {
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
@@ -141,7 +155,8 @@ describe('BookingController', () => {
       const lockService = new MemoryLockService();
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
@@ -166,7 +181,8 @@ describe('BookingController', () => {
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 
@@ -185,7 +201,8 @@ describe('BookingController', () => {
       const lockService = new MemoryLockService();
       const svc = new BookingService(
         new MemoryBookingRepository(),
-        lockService
+        lockService,
+        logger as any
       );
       const ctrl = new BookingController(svc, broadcast, emailService as any, auditService as any);
 

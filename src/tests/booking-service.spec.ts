@@ -24,15 +24,26 @@ function makeLockService() {
   } as unknown as import('../booking/domain/lock-service.js').ILockService;
 }
 
+function makeLogger() {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  } as unknown as import('../infra/http/logger.js').Logger;
+}
+
 describe('BookingService', () => {
   let service: BookingService;
   let bookingRepo: ReturnType<typeof makeBookingRepository>;
   let lockSvc: ReturnType<typeof makeLockService>;
+  let logger: ReturnType<typeof makeLogger>;
 
   beforeEach(() => {
     bookingRepo = makeBookingRepository();
     lockSvc = makeLockService();
-    service = new BookingService(bookingRepo, lockSvc);
+    logger = makeLogger();
+    service = new BookingService(bookingRepo, lockSvc, logger);
   });
 
   describe('book', () => {

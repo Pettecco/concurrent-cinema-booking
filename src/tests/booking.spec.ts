@@ -21,15 +21,26 @@ function makeBooking(overrides?: { userId?: string; seatId?: string; showtimeId?
   };
 }
 
+function makeLogger() {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+}
+
 describe('BookingService', () => {
   let lockService: MemoryLockService;
   let bookingRepository: MemoryBookingRepository;
   let service: BookingService;
+  let logger: ReturnType<typeof makeLogger>;
 
   beforeEach(() => {
     lockService = new MemoryLockService();
     bookingRepository = new MemoryBookingRepository();
-    service = new BookingService(bookingRepository, lockService);
+    logger = makeLogger();
+    service = new BookingService(bookingRepository, lockService, logger as any);
   });
 
   describe('book', () => {

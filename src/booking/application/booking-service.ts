@@ -5,25 +5,26 @@ import {
   SeatAlreadyBookedError,
   SeatNotLockedError,
 } from '../domain/errors.js';
-import { logger } from '../../infra/http/logger.js';
+import type { Logger } from '../../infra/http/logger.js';
 
 export class BookingService {
   constructor(
     private readonly bookingRepository: IBookingRepository,
-    private readonly lockService: ILockService
+    private readonly lockService: ILockService,
+    private readonly logger: Logger
   ) {}
 
   async book(input: Omit<Booking, 'id'>): Promise<Booking> {
     const lockKey = `lock:${input.roomId}:${input.showtimeId}:${input.seatId}`;
 
-    logger.info(
+    this.logger.info(
       { lockKey, userId: input.userId },
       'Verifying lock for booking'
     );
 
     const hasValidLock = await this.lockService.verify(lockKey, input.userId);
     if (!hasValidLock) {
-      logger.warn(
+      this.logger.warn(
         {
           lockKey,
           userId: input.userId,
@@ -36,7 +37,7 @@ export class BookingService {
       throw new SeatNotLockedError(input.roomId, input.seatId);
     }
 
-    logger.info(
+    this.logger.info(
       { lockKey, userId: input.userId },
       'Lock verified successfully'
     );
@@ -44,14 +45,14 @@ export class BookingService {
     const created = await this.bookingRepository.book(input);
 
     if (!created) {
-      logger.warn(
+      this.logger.warn(
         { roomId: input.roomId, showtimeId: input.showtimeId, seatId: input.seatId },
         'Seat already booked'
       );
       throw new SeatAlreadyBookedError(input.roomId, input.seatId);
     }
 
-    logger.info(
+    this.logger.info(
       {
         bookingId: created.id,
         roomId: input.roomId,
@@ -64,7 +65,7 @@ export class BookingService {
 
     await this.lockService.release(lockKey, input.userId);
 
-    logger.info(
+    this.logger.info(
       { bookingId: created.id, lockKey },
       'Lock released after booking'
     );
