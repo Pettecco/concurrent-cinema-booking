@@ -18,29 +18,29 @@ export class BookingController {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { movieId, seatId, userId } = input.data;
+    const { roomId, seatId, userId } = input.data;
 
     const booking = await this.service.book({
       id: crypto.randomUUID(),
-      movieId,
+      roomId,
       seatId,
       userId,
       status: 'CONFIRMED',
     });
 
-    this.broadcast.emitSeatBooked(movieId, seatId, userId);
+    this.broadcast.emitSeatBooked(roomId, seatId, userId);
 
     return res.status(201).json(booking);
   }
 
-  async listByMovie(req: Request, res: Response) {
-    const input = listBookingSchema.safeParse({ movieId: req.params.movieId });
+  async listByRoom(req: Request, res: Response) {
+    const input = listBookingSchema.safeParse({ roomId: req.params.roomId });
 
     if (!input.success) {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const bookings = await this.service.listBookings(input.data.movieId);
+    const bookings = await this.service.listBookings(input.data.roomId);
 
     return res.status(200).json(bookings);
   }

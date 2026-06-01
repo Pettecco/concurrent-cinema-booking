@@ -16,7 +16,7 @@ export class LockController {
     if (!input.success) {
       logger.warn(
         {
-          movieId: req.body?.movieId,
+          roomId: req.body?.roomId,
           seatId: req.body?.seatId,
           errors: input.error.issues,
         },
@@ -25,8 +25,8 @@ export class LockController {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { movieId, seatId, userId } = input.data;
-    const lockKey = `lock:${movieId}:${seatId}`;
+    const { roomId, seatId, userId } = input.data;
+    const lockKey = `lock:${roomId}:${seatId}`;
     const ttlMS = 300000;
 
     logger.info({ lockKey, userId }, 'Attempting to acquire lock');
@@ -35,7 +35,7 @@ export class LockController {
 
     if (!acquired) {
       logger.warn(
-        { lockKey, userId, movieId, seatId },
+        { lockKey, userId, roomId, seatId },
         'Lock already acquired by another user'
       );
       return res.status(409).json({
@@ -52,7 +52,7 @@ export class LockController {
       'Lock acquired successfully'
     );
 
-    this.broadcast.emitSeatLocked(movieId, seatId, userId, expiresAt);
+    this.broadcast.emitSeatLocked(roomId, seatId, userId, expiresAt);
 
     return res.status(200).json({
       success: true,
@@ -66,7 +66,7 @@ export class LockController {
     if (!input.success) {
       logger.warn(
         {
-          movieId: req.body?.movieId,
+          roomId: req.body?.roomId,
           seatId: req.body?.seatId,
           errors: input.error.issues,
         },
@@ -75,8 +75,8 @@ export class LockController {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { movieId, seatId, userId } = input.data;
-    const lockKey = `lock:${movieId}:${seatId}`;
+    const { roomId, seatId, userId } = input.data;
+    const lockKey = `lock:${roomId}:${seatId}`;
 
     logger.info({ lockKey, userId }, 'Attempting to release lock');
 
@@ -84,13 +84,13 @@ export class LockController {
       await this.lockService.release(lockKey, userId);
       logger.info({ lockKey, userId }, 'Lock released successfully');
 
-      this.broadcast.emitSeatReleased(movieId, seatId);
+      this.broadcast.emitSeatReleased(roomId, seatId);
 
       return res.status(204).send();
     } catch (error) {
       if (error instanceof LockNotOwnedError) {
         logger.warn(
-          { lockKey, userId, movieId, seatId },
+          { lockKey, userId, roomId, seatId },
           'User attempted to release lock they do not own'
         );
         return res.status(403).json({

@@ -8,7 +8,7 @@ export class PostgresBookingRepository implements IBookingRepository {
   async create(booking: Booking): Promise<Booking> {
     const [inserted] = await this.db('bookings')
       .insert({
-        movie_id: booking.movieId,
+        room_id: booking.roomId,
         seat_id: booking.seatId,
         user_id: booking.userId,
         status: booking.status,
@@ -17,31 +17,31 @@ export class PostgresBookingRepository implements IBookingRepository {
 
     return {
       id: inserted.id,
-      movieId: inserted.movie_id,
+      roomId: inserted.room_id,
       seatId: inserted.seat_id,
       userId: inserted.user_id,
       status: inserted.status,
     };
   }
 
-  async findByMovieId(movieId: string): Promise<Booking[]> {
+  async findByRoomId(roomId: string): Promise<Booking[]> {
     const rows = await this.db('bookings')
-      .where({ movie_id: movieId })
-      .select('id', 'movie_id', 'seat_id', 'user_id', 'status');
+      .where({ room_id: roomId })
+      .select('id', 'room_id', 'seat_id', 'user_id', 'status');
 
     return rows.map(row => ({
       id: row.id,
-      movieId: row.movie_id,
+      roomId: row.room_id,
       seatId: row.seat_id,
       userId: row.user_id,
       status: row.status,
     }));
   }
 
-  async findBySeat(movieId: string, seatId: string): Promise<Booking | null> {
+  async findBySeat(roomId: string, seatId: string): Promise<Booking | null> {
     const booking = await this.db('bookings')
-      .where({ movie_id: movieId, seat_id: seatId })
-      .select('id', 'movie_id', 'seat_id', 'user_id', 'status')
+      .where({ room_id: roomId, seat_id: seatId })
+      .select('id', 'room_id', 'seat_id', 'user_id', 'status')
       .first();
 
     if (!booking) {
@@ -50,7 +50,7 @@ export class PostgresBookingRepository implements IBookingRepository {
 
     return {
       id: booking.id,
-      movieId: booking.movie_id,
+      roomId: booking.room_id,
       seatId: booking.seat_id,
       userId: booking.user_id,
       status: booking.status,
@@ -60,7 +60,7 @@ export class PostgresBookingRepository implements IBookingRepository {
   async book(booking: Booking): Promise<Booking | null> {
     return this.db.transaction(async trx => {
       const existing = await trx('bookings')
-        .where({ movie_id: booking.movieId, seat_id: booking.seatId })
+        .where({ room_id: booking.roomId, seat_id: booking.seatId })
         .select('id')
         .forUpdate()
         .first();
@@ -71,7 +71,7 @@ export class PostgresBookingRepository implements IBookingRepository {
 
       const [inserted] = await trx('bookings')
         .insert({
-          movie_id: booking.movieId,
+          room_id: booking.roomId,
           seat_id: booking.seatId,
           user_id: booking.userId,
           status: booking.status,
@@ -80,7 +80,7 @@ export class PostgresBookingRepository implements IBookingRepository {
 
       return {
         id: inserted.id,
-        movieId: inserted.movie_id,
+        roomId: inserted.room_id,
         seatId: inserted.seat_id,
         userId: inserted.user_id,
         status: inserted.status,

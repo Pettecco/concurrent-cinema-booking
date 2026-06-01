@@ -1,6 +1,6 @@
 export interface Booking {
   id?: string;
-  movieId: string;
+  roomId: string;
   seatId: string;
   userId: string;
   status: string;

@@ -31,35 +31,35 @@ export async function setupWebSocket(httpServer: HttpServer): Promise<Server> {
   io.on('connection', socket => {
     logger.info({ socketId: socket.id }, 'WebSocket client connected');
 
-    socket.on('subscribe', (movieId: string) => {
+    socket.on('subscribe', (roomId: string) => {
       const parsed = clientToServerSchema.safeParse({
         type: 'subscribe',
-        movieId,
+        roomId,
       });
       if (!parsed.success) {
         socket.emit('error', { message: 'Invalid subscribe payload' });
         return;
       }
-      socket.join(movieId);
+      socket.join(roomId);
       logger.info(
-        { socketId: socket.id, movieId },
-        'Client subscribed to movie'
+        { socketId: socket.id, roomId },
+        'Client subscribed to room'
       );
     });
 
-    socket.on('unsubscribe', (movieId: string) => {
+    socket.on('unsubscribe', (roomId: string) => {
       const parsed = clientToServerSchema.safeParse({
         type: 'unsubscribe',
-        movieId,
+        roomId,
       });
       if (!parsed.success) {
         socket.emit('error', { message: 'Invalid unsubscribe payload' });
         return;
       }
-      socket.leave(movieId);
+      socket.leave(roomId);
       logger.info(
-        { socketId: socket.id, movieId },
-        'Client unsubscribed from movie'
+        { socketId: socket.id, roomId },
+        'Client unsubscribed from room'
       );
     });
 

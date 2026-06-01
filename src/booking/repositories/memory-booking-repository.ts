@@ -8,33 +8,33 @@ export class MemoryBookingRepository implements IBookingRepository {
   async create(booking: Booking): Promise<Booking> {
     const created: Booking = {
       id: booking.id ?? randomUUID(),
-      movieId: booking.movieId,
+      roomId: booking.roomId,
       seatId: booking.seatId,
       userId: booking.userId,
       status: booking.status,
     };
-    const uniqueKey = `${booking.movieId}:${booking.seatId}`;
+    const uniqueKey = `${booking.roomId}:${booking.seatId}`;
     this.store.set(uniqueKey, created);
     return created;
   }
 
-  async findByMovieId(movieId: string): Promise<Booking[]> {
-    return Array.from(this.store.values()).filter(b => b.movieId === movieId);
+  async findByRoomId(roomId: string): Promise<Booking[]> {
+    return Array.from(this.store.values()).filter(b => b.roomId === roomId);
   }
 
-  async findBySeat(movieId: string, seatId: string): Promise<Booking | null> {
-    const uniqueKey = `${movieId}:${seatId}`;
+  async findBySeat(roomId: string, seatId: string): Promise<Booking | null> {
+    const uniqueKey = `${roomId}:${seatId}`;
     return this.store.get(uniqueKey) ?? null;
   }
 
   async book(booking: Booking): Promise<Booking | null> {
-    const uniqueKey = `${booking.movieId}:${booking.seatId}`;
+    const uniqueKey = `${booking.roomId}:${booking.seatId}`;
     if (this.store.has(uniqueKey)) {
       return null;
     }
     const created: Booking = {
       id: booking.id ?? randomUUID(),
-      movieId: booking.movieId,
+      roomId: booking.roomId,
       seatId: booking.seatId,
       userId: booking.userId,
       status: booking.status,

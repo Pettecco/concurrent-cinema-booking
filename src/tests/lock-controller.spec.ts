@@ -41,8 +41,8 @@ describe('LockController', () => {
 
   describe('acquire', () => {
     it('returns 200 with lock info when acquired', async () => {
-      const movieId = randomUUID();
-      const req = makeReq({ movieId, seatId: 'A1', userId: randomUUID() });
+      const roomId = randomUUID();
+      const req = makeReq({ roomId, seatId: 'A1', userId: randomUUID() });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -54,16 +54,16 @@ describe('LockController', () => {
     });
 
     it('emits seat_locked event on success', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const seatId = 'A1';
       const userId = randomUUID();
-      const req = makeReq({ movieId, seatId, userId });
+      const req = makeReq({ roomId, seatId, userId });
       const res = makeRes();
 
       await controller.acquire(req, res);
 
       expect(broadcast.emitSeatLocked).toHaveBeenCalledWith(
-        movieId,
+        roomId,
         seatId,
         userId,
         expect.any(Date)
@@ -71,13 +71,13 @@ describe('LockController', () => {
     });
 
     it('returns 409 when lock is already held', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId1 = randomUUID();
       const userId2 = randomUUID();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId1);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId1);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId: userId2 });
+      const req = makeReq({ roomId, seatId: 'A1', userId: userId2 });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -91,7 +91,7 @@ describe('LockController', () => {
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ movieId: 'not-uuid', seatId: 'A1', userId: 'bad' });
+      const req = makeReq({ roomId: 'not-uuid', seatId: 'A1', userId: 'bad' });
       const res = makeRes();
 
       await controller.acquire(req, res);
@@ -102,12 +102,12 @@ describe('LockController', () => {
 
   describe('release', () => {
     it('returns 204 when released successfully', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, seatId: 'A1', userId });
       const res = makeRes();
 
       await controller.release(req, res);
@@ -116,26 +116,26 @@ describe('LockController', () => {
     });
 
     it('emits seat_released event on success', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, seatId: 'A1', userId });
       const res = makeRes();
 
       await controller.release(req, res);
 
-      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(movieId, 'A1');
+      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(roomId, 'A1');
     });
 
     it('returns 403 when user does not own the lock', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId: randomUUID() });
+      const req = makeReq({ roomId, seatId: 'A1', userId: randomUUID() });
       const res = makeRes();
 
       await controller.release(req, res);
@@ -149,7 +149,7 @@ describe('LockController', () => {
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ movieId: 'bad', seatId: '', userId: 'bad' });
+      const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad' });
       const res = makeRes();
 
       await controller.release(req, res);

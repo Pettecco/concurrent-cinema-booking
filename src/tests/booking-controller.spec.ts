@@ -49,11 +49,11 @@ describe('BookingController', () => {
 
   describe('create', () => {
     it('returns 201 with booking when lock is valid', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -61,7 +61,7 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, seatId: 'A1', userId });
       const res = makeRes();
 
       await ctrl.create(req, res);
@@ -69,7 +69,7 @@ describe('BookingController', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          movieId,
+          roomId,
           seatId: 'A1',
           userId,
           status: 'CONFIRMED',
@@ -78,11 +78,11 @@ describe('BookingController', () => {
     });
 
     it('emits seat_booked event on success', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -90,30 +90,30 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      const req = makeReq({ movieId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, seatId: 'A1', userId });
       const res = makeRes();
 
       await ctrl.create(req, res);
 
       expect(broadcast.emitSeatBooked).toHaveBeenCalledWith(
-        movieId,
+        roomId,
         'A1',
         userId
       );
     });
 
     it('throws SeatNotLockedError when no lock exists', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
 
-      const req = makeReq({ movieId, seatId: 'A1', userId });
+      const req = makeReq({ roomId, seatId: 'A1', userId });
       const res = makeRes();
 
       await expect(controller.create(req, res)).rejects.toThrow(/not locked/);
     });
 
     it('returns 400 on invalid input', async () => {
-      const req = makeReq({ movieId: 'bad', seatId: '', userId: 'bad' });
+      const req = makeReq({ roomId: 'bad', seatId: '', userId: 'bad' });
       const res = makeRes();
 
       await controller.create(req, res);
@@ -122,13 +122,13 @@ describe('BookingController', () => {
     });
   });
 
-  describe('listByMovie', () => {
+  describe('listByRoom', () => {
     it('returns 200 with bookings array', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       const userId = randomUUID();
       const lockService = new MemoryLockService();
 
-      await lockService.acquire(`lock:${movieId}:A1`, 300_000, userId);
+      await lockService.acquire(`lock:${roomId}:A1`, 300_000, userId);
 
       const svc = new BookingService(
         new MemoryBookingRepository(),
@@ -136,22 +136,22 @@ describe('BookingController', () => {
       );
       const ctrl = new BookingController(svc, broadcast);
 
-      await ctrl.create(makeReq({ movieId, seatId: 'A1', userId }), makeRes());
+      await ctrl.create(makeReq({ roomId, seatId: 'A1', userId }), makeRes());
 
-      const req = makeReq({}, { movieId });
+      const req = makeReq({}, { roomId: roomId });
       const res = makeRes();
 
-      await ctrl.listByMovie(req, res);
+      await ctrl.listByRoom(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.any(Array));
     });
 
-    it('returns 400 on invalid movieId', async () => {
-      const req = makeReq({}, { movieId: 'not-uuid' });
+    it('returns 400 on invalid roomId', async () => {
+      const req = makeReq({}, { roomId: 'not-uuid' });
       const res = makeRes();
 
-      await controller.listByMovie(req, res);
+      await controller.listByRoom(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
     });

@@ -14,7 +14,7 @@ export class BookingService {
   ) {}
 
   async book(booking: Booking): Promise<Booking> {
-    const lockKey = `lock:${booking.movieId}:${booking.seatId}`;
+    const lockKey = `lock:${booking.roomId}:${booking.seatId}`;
 
     logger.info(
       { lockKey, userId: booking.userId },
@@ -27,12 +27,12 @@ export class BookingService {
         {
           lockKey,
           userId: booking.userId,
-          movieId: booking.movieId,
+          roomId: booking.roomId,
           seatId: booking.seatId,
         },
         'Booking attempted without valid lock'
       );
-      throw new SeatNotLockedError(booking.movieId, booking.seatId);
+      throw new SeatNotLockedError(booking.roomId, booking.seatId);
     }
 
     logger.info(
@@ -44,16 +44,16 @@ export class BookingService {
 
     if (!created) {
       logger.warn(
-        { movieId: booking.movieId, seatId: booking.seatId },
+        { roomId: booking.roomId, seatId: booking.seatId },
         'Seat already booked'
       );
-      throw new SeatAlreadyBookedError(booking.movieId, booking.seatId);
+      throw new SeatAlreadyBookedError(booking.roomId, booking.seatId);
     }
 
     logger.info(
       {
         bookingId: created.id,
-        movieId: booking.movieId,
+        roomId: booking.roomId,
         seatId: booking.seatId,
       },
       'Booking created successfully, releasing lock'
@@ -69,14 +69,14 @@ export class BookingService {
     return created;
   }
 
-  async listBookings(movieId: string): Promise<Booking[]> {
-    return this.bookingRepository.findByMovieId(movieId);
+  async listBookings(roomId: string): Promise<Booking[]> {
+    return this.bookingRepository.findByRoomId(roomId);
   }
 
   async findBookingBySeat(
-    movieId: string,
+    roomId: string,
     seatId: string
   ): Promise<Booking | null> {
-    return this.bookingRepository.findBySeat(movieId, seatId);
+    return this.bookingRepository.findBySeat(roomId, seatId);
   }
 }

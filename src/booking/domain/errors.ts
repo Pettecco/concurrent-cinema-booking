@@ -6,15 +6,15 @@ export class DomainError extends Error {
 }
 
 export class SeatAlreadyBookedError extends DomainError {
-  constructor(movieId: string, seatId: string) {
-    super(`Seat ${seatId} is already booked for movie ${movieId}`);
+  constructor(roomId: string, seatId: string) {
+    super(`Seat ${seatId} is already booked for room ${roomId}`);
     this.name = 'SeatAlreadyBookedError';
   }
 }
 
 export class SeatLockedError extends DomainError {
-  constructor(movieId: string, seatId: string) {
-    super(`Seat ${seatId} is currently locked for movie ${movieId}`);
+  constructor(roomId: string, seatId: string) {
+    super(`Seat ${seatId} is currently locked for room ${roomId}`);
     this.name = 'SeatLockedError';
   }
 }
@@ -34,8 +34,8 @@ export class LockNotOwnedError extends DomainError {
 }
 
 export class SeatNotLockedError extends DomainError {
-  constructor(movieId: string, seatId: string) {
-    super(`Seat ${seatId} is not locked for movie ${movieId}`);
+  constructor(roomId: string, seatId: string) {
+    super(`Seat ${seatId} is not locked for room ${roomId}`);
     this.name = 'SeatNotLockedError';
   }
 }

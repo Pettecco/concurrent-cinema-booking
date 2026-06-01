@@ -13,7 +13,7 @@ describe('MemoryBookingRepository', () => {
     it('creates a booking and returns it', async () => {
       const booking = {
         id: randomUUID(),
-        movieId: randomUUID(),
+        roomId: randomUUID(),
         seatId: 'A1',
         userId: randomUUID(),
         status: 'CONFIRMED',
@@ -26,11 +26,11 @@ describe('MemoryBookingRepository', () => {
     });
 
     it('overwrites if same movie+seat exists', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
 
       const first = await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -38,7 +38,7 @@ describe('MemoryBookingRepository', () => {
 
       const second = await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-2',
         status: 'CONFIRMED',
@@ -50,16 +50,16 @@ describe('MemoryBookingRepository', () => {
 
   describe('findBySeat', () => {
     it('returns booking when exists', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
       });
 
-      const result = await repo.findBySeat(movieId, 'A1');
+      const result = await repo.findBySeat(roomId, 'A1');
 
       expect(result).not.toBeNull();
       expect(result!.seatId).toBe('A1');
@@ -71,10 +71,10 @@ describe('MemoryBookingRepository', () => {
     });
 
     it('returns null for wrong movie', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
       await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -85,13 +85,13 @@ describe('MemoryBookingRepository', () => {
     });
   });
 
-  describe('findByMovieId', () => {
+  describe('findByRoomId', () => {
     it('returns all bookings for a movie', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
 
       await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -99,7 +99,7 @@ describe('MemoryBookingRepository', () => {
 
       await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A2',
         userId: 'user-2',
         status: 'CONFIRMED',
@@ -107,20 +107,20 @@ describe('MemoryBookingRepository', () => {
 
       await repo.create({
         id: randomUUID(),
-        movieId: randomUUID(),
+        roomId: randomUUID(),
         seatId: 'A1',
         userId: 'user-3',
         status: 'CONFIRMED',
       });
 
-      const results = await repo.findByMovieId(movieId);
+      const results = await repo.findByRoomId(roomId);
 
       expect(results).toHaveLength(2);
       expect(results.map(r => r.seatId).sort()).toEqual(['A1', 'A2']);
     });
 
     it('returns empty array when no bookings', async () => {
-      const results = await repo.findByMovieId(randomUUID());
+      const results = await repo.findByRoomId(randomUUID());
       expect(results).toHaveLength(0);
     });
   });
@@ -129,7 +129,7 @@ describe('MemoryBookingRepository', () => {
     it('creates booking and returns it when seat is free', async () => {
       const booking = {
         id: randomUUID(),
-        movieId: randomUUID(),
+        roomId: randomUUID(),
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -142,11 +142,11 @@ describe('MemoryBookingRepository', () => {
     });
 
     it('returns null when seat is already booked', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
 
       await repo.book({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -154,7 +154,7 @@ describe('MemoryBookingRepository', () => {
 
       const result = await repo.book({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-2',
         status: 'CONFIRMED',
@@ -166,11 +166,11 @@ describe('MemoryBookingRepository', () => {
 
   describe('clear', () => {
     it('removes all bookings', async () => {
-      const movieId = randomUUID();
+      const roomId = randomUUID();
 
       await repo.create({
         id: randomUUID(),
-        movieId,
+        roomId,
         seatId: 'A1',
         userId: 'user-1',
         status: 'CONFIRMED',
@@ -178,7 +178,7 @@ describe('MemoryBookingRepository', () => {
 
       repo.clear();
 
-      const results = await repo.findByMovieId(movieId);
+      const results = await repo.findByRoomId(roomId);
       expect(results).toHaveLength(0);
     });
   });

@@ -18,64 +18,64 @@ describe('createBroadcast', () => {
     );
   });
 
-  it('emitSeatLocked calls io.to(movieId).emit with correct payload', () => {
-    const movieId = 'movie-1';
+  it('emitSeatLocked calls io.to(roomId).emit with correct payload', () => {
+    const roomId = 'movie-1';
     const seatId = 'A1';
     const userId = 'user-1';
     const expiresAt = new Date('2026-01-01T00:00:00Z');
 
-    broadcast.emitSeatLocked(movieId, seatId, userId, expiresAt);
+    broadcast.emitSeatLocked(roomId, seatId, userId, expiresAt);
 
-    expect(mockIO.to).toHaveBeenCalledWith(movieId);
+    expect(mockIO.to).toHaveBeenCalledWith(roomId);
     expect(mockIO.emit).toHaveBeenCalledWith('seat_locked', {
       type: 'seat_locked',
-      movieId,
+      roomId,
       seatId,
       userId,
       expiresAt: '2026-01-01T00:00:00.000Z',
     });
   });
 
-  it('emitSeatReleased calls io.to(movieId).emit with correct payload', () => {
-    const movieId = 'movie-1';
+  it('emitSeatReleased calls io.to(roomId).emit with correct payload', () => {
+    const roomId = 'movie-1';
     const seatId = 'A1';
 
-    broadcast.emitSeatReleased(movieId, seatId);
+    broadcast.emitSeatReleased(roomId, seatId);
 
-    expect(mockIO.to).toHaveBeenCalledWith(movieId);
+    expect(mockIO.to).toHaveBeenCalledWith(roomId);
     expect(mockIO.emit).toHaveBeenCalledWith('seat_released', {
       type: 'seat_released',
-      movieId,
+      roomId,
       seatId,
     });
   });
 
-  it('emitSeatBooked calls io.to(movieId).emit with correct payload', () => {
-    const movieId = 'movie-1';
+  it('emitSeatBooked calls io.to(roomId).emit with correct payload', () => {
+    const roomId = 'movie-1';
     const seatId = 'A1';
     const userId = 'user-1';
 
-    broadcast.emitSeatBooked(movieId, seatId, userId);
+    broadcast.emitSeatBooked(roomId, seatId, userId);
 
-    expect(mockIO.to).toHaveBeenCalledWith(movieId);
+    expect(mockIO.to).toHaveBeenCalledWith(roomId);
     expect(mockIO.emit).toHaveBeenCalledWith('seat_booked', {
       type: 'seat_booked',
-      movieId,
+      roomId,
       seatId,
       userId,
     });
   });
 
-  it('emitLockExpired calls io.to(movieId).emit with correct payload', () => {
-    const movieId = 'movie-1';
+  it('emitLockExpired calls io.to(roomId).emit with correct payload', () => {
+    const roomId = 'movie-1';
     const seatId = 'A1';
 
-    broadcast.emitLockExpired(movieId, seatId);
+    broadcast.emitLockExpired(roomId, seatId);
 
-    expect(mockIO.to).toHaveBeenCalledWith(movieId);
+    expect(mockIO.to).toHaveBeenCalledWith(roomId);
     expect(mockIO.emit).toHaveBeenCalledWith('lock_expired', {
       type: 'lock_expired',
-      movieId,
+      roomId,
       seatId,
     });
   });

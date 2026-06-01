@@ -17,17 +17,17 @@ export function startKeyspaceListener(io: Server) {
     const parts = key.split(':');
     if (parts.length < 3) return;
 
-    const movieId = parts[1]!;
+    const roomId = parts[1]!;
     const seatId = parts[2]!;
 
     logger.info(
-      { movieId, seatId, key },
+      { roomId, seatId, key },
       'Lock expired via keyspace notification'
     );
 
-    io.to(movieId).emit('lock_expired', {
+    io.to(roomId).emit('lock_expired', {
       type: 'lock_expired',
-      movieId,
+      roomId,
       seatId,
     });
   });
