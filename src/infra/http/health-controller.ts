@@ -8,6 +8,52 @@ export class HealthController {
     private readonly redis: Redis
   ) {}
 
+  /**
+   * @openapi
+   * /health:
+   *   get:
+   *     summary: Health check
+   *     description: Checks the health status of the API and its dependencies (PostgreSQL, Redis)
+   *     tags: [Health]
+   *     responses:
+   *       200:
+   *         description: All systems healthy
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 status:
+   *                   type: string
+   *                   example: 'ok'
+   *                 checks:
+   *                   type: object
+   *                   properties:
+   *                     postgres:
+   *                       type: object
+   *                       properties:
+   *                         status:
+   *                           type: string
+   *                           example: 'ok'
+   *                     redis:
+   *                       type: object
+   *                       properties:
+   *                         status:
+   *                           type: string
+   *                           example: 'ok'
+   *       503:
+   *         description: Service unavailable
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 status:
+   *                   type: string
+   *                   example: 'error'
+   *                 checks:
+   *                   type: object
+   */
   async check(_req: Request, res: Response) {
     const checks = await Promise.allSettled([
       this.checkPostgres(),
