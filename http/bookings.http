@@ -1,50 +1,61 @@
 @baseUrl = http://localhost:3000
 
+### Room IDs (from seeds):
+### Room 1: 660e8400-e29b-41d4-a716-446655440001 (One Flew Over the Cuckoo's Nest)
+### Room 2: 660e8400-e29b-41d4-a716-446655440002 (Moonlight)
+### Room 3: 660e8400-e29b-41d4-a716-446655440003 (Aftersun)
+
 ### Health Check
 GET {{baseUrl}}/health
 
-### Create Booking - Seat A1
+### List all rooms
+GET {{baseUrl}}/rooms
+
+### List all movies
+GET {{baseUrl}}/movies
+
+### Create Booking - Seat A1 in Room 1
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
 
-### List Bookings by Movie
-GET {{baseUrl}}/bookings/550e8400-e29b-41d4-a716-446655440001
+### List Bookings by Room
+GET {{baseUrl}}/bookings/660e8400-e29b-41d4-a716-446655440001
 
-### Create Booking - Seat A2 (same movie)
+### Create Booking - Seat A2 in Room 1 (same room)
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A2",
   "userId": "550e8400-e29b-41d4-a716-446655440101"
 }
 
-### Create Booking - Same Seat A1 (should fail)
+### Create Booking - Same Seat A1 (should fail - already booked)
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440102"
 }
 
-### Create Booking - Different Movie
+### Create Booking - Different Room (Room 2)
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440002",
+  "roomId": "660e8400-e29b-41d4-a716-446655440002",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440103"
 }
 
-### List Bookings for Movie-2
-GET {{baseUrl}}/bookings/550e8400-e29b-41d4-a716-446655440002
+### List Bookings for Room 2
+GET {{baseUrl}}/bookings/660e8400-e29b-41d4-a716-446655440002

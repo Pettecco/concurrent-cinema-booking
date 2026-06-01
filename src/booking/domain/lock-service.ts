@@ -1,25 +1,26 @@
 export interface ILockService {
   /**
-   * Acquires a lock for a specific key.
-   * @param key - The resource key to lock.
-   * @param ttlMS - Time-to-live for the lock in milliseconds.
-   * @param userId - The ID of the user requesting the lock.
-   * @returns True if the lock was acquired, false otherwise.
+   * Attempts to acquire a lock with a specified TTL.
+   * @param key - The lock key (e.g., "lock:roomId:seatId")
+   * @param ttlMS - Time to live in milliseconds
+   * @param userId - ID of the user acquiring the lock
+   * @returns true if lock was acquired, false if already held by another user
    */
   acquire(key: string, ttlMS: number, userId: string): Promise<boolean>;
 
   /**
-   * Releases a previously acquired lock.
-   * @param key - The resource key to unlock.
-   * @param userId - The ID of the user releasing the lock.
+   * Releases a lock if the user owns it.
+   * @param key - The lock key
+   * @param userId - ID of the user releasing the lock
+   * @throws {LockNotOwnedError} If the lock is owned by another user
    */
   release(key: string, userId: string): Promise<void>;
 
   /**
-   * Verifies if a lock is held by a specific user.
-   * @param key - The resource key to check.
-   * @param userId - The ID of the user to verify.
-   * @returns True if the user holds the lock, false otherwise.
+   * Verifies if a user owns a lock.
+   * @param key - The lock key
+   * @param userId - ID of the user to verify
+   * @returns true if the user owns the lock, false otherwise
    */
   verify(key: string, userId: string): Promise<boolean>;
 }

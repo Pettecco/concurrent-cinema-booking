@@ -1,11 +1,16 @@
 @baseUrl = http://localhost:3000
 
-### Adquirir lock - Assento A1
+### Room IDs (from seeds):
+### Room 1: 660e8400-e29b-41d4-a716-446655440001 (One Flew Over the Cuckoo's Nest)
+### Room 2: 660e8400-e29b-41d4-a716-446655440002 (Moonlight)
+### Room 3: 660e8400-e29b-41d4-a716-446655440003 (Aftersun)
+
+### Adquirir lock - Assento A1 na Sala 1
 POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
@@ -15,17 +20,17 @@ POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440200"
 }
 
-### Adquirir lock - Assento A2 (diferente, deve sucesso)
+### Adquirir lock - Assento A2 na Sala 1 (diferente, deve sucesso)
 POST {{baseUrl}}/locks
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A2",
   "userId": "550e8400-e29b-41d4-a716-446655440200"
 }
@@ -35,7 +40,7 @@ DELETE {{baseUrl}}/locks
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A1",
   "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
@@ -45,7 +50,7 @@ DELETE {{baseUrl}}/locks
 Content-Type: application/json
 
 {
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "seatId": "A2",
   "userId": "550e8400-e29b-41d4-a716-446655440999"
 }
