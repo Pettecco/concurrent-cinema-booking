@@ -37,6 +37,7 @@ Content-Type: application/json
 }
 
 ### 3. User 1 cria booking (lock é verificado e liberado automaticamente)
+### Email será enviado para confirmação via Mailhog (http://localhost:8025)
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
@@ -44,7 +45,8 @@ Content-Type: application/json
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100"
+  "userId": "550e8400-e29b-41d4-a716-446655440100",
+  "email": "user1@cinema.com"
 }
 
 ### 4. User 2 tenta criar booking sem lock (deve falhar 403 - seat not locked)
@@ -55,7 +57,8 @@ Content-Type: application/json
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A2",
-  "userId": "550e8400-e29b-41d4-a716-446655440200"
+  "userId": "550e8400-e29b-41d4-a716-446655440200",
+  "email": "user2@cinema.com"
 }
 
 ### 5. User 2 adquire lock no assento A2 (Room 1, 14:00)
@@ -70,6 +73,7 @@ Content-Type: application/json
 }
 
 ### 6. User 2 cria booking com lock válido (deve sucesso)
+### Email será enviado para user2@cinema.com
 POST {{baseUrl}}/bookings
 Content-Type: application/json
 
@@ -77,7 +81,8 @@ Content-Type: application/json
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A2",
-  "userId": "550e8400-e29b-41d4-a716-446655440200"
+  "userId": "550e8400-e29b-41d4-a716-446655440200",
+  "email": "user2@cinema.com"
 }
 
 ### 7. Listar bookings da Room 1

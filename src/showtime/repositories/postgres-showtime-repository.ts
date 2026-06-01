@@ -19,23 +19,6 @@ export class PostgresShowtimeRepository implements IShowtimeRepository {
     return this.toDomain(showtime);
   }
 
-  async create(data: Omit<Showtime, 'id'>): Promise<Showtime> {
-    const [row] = await this.db('showtimes')
-      .insert({
-        id: this.db.raw('gen_random_uuid()'),
-        room_id: data.roomId,
-        start_time: data.startTime,
-        end_time: data.endTime,
-      })
-      .returning('*');
-
-    return this.toDomain(row);
-  }
-
-  async delete(id: string): Promise<void> {
-    await this.db('showtimes').where({ id }).del();
-  }
-
   private toDomain(row: any): Showtime {
     return {
       id: row.id,

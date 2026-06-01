@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
+  await knex('bookings').del();
+  await knex('showtimes').del();
+  await knex('rooms').del();
   await knex('movies').del();
 
   await knex('movies').insert([

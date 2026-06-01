@@ -24,12 +24,17 @@ import { PostgresMovieRepository } from './movie/repositories/postgres-movie-rep
 import { RoomController } from './room/presentation/controllers/room-controller.js';
 import { roomRoutes } from './room/presentation/routes/room-routes.js';
 import { PostgresRoomRepository } from './room/repositories/postgres-room-repository.js';
+import { EmailService } from './application/services/email-service.js';
+import { emailWorker } from './infra/queues/email-queue.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './infra/http/swagger.js';
 
 const app = express();
 
 const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
 const bookingService = new BookingService(bookingRepository, lockService);
+const emailService = new EmailService();
 const healthController = new HealthController(db, redis);
 const movieRepository = new PostgresMovieRepository(db);
 const movieController = new MovieController(movieRepository);
@@ -42,7 +47,11 @@ const io = await setupWebSocket(httpServer);
 const broadcast = createBroadcast(io);
 startKeyspaceListener(io);
 
-const bookingController = new BookingController(bookingService, broadcast);
+const bookingController = new BookingController(
+  bookingService,
+  broadcast,
+  emailService
+);
 const lockController = new LockController(lockService, broadcast);
 
 app.use(cors());
@@ -53,7 +62,11 @@ app.use('/locks', lockRoutes(lockController));
 app.use('/movies', movieRoutes(movieController));
 app.use('/rooms', roomRoutes(roomController));
 
+logger.info('Email worker initialized');
+
 app.get('/health', (req, res) => healthController.check(req, res));
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
 
