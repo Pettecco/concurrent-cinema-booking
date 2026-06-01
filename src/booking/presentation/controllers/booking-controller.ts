@@ -5,11 +5,13 @@ import {
   listBookingSchema,
 } from '../schemas/booking.schema.js';
 import type { Broadcast } from '../../../infra/websocket/broadcast.js';
+import { EmailService } from '../../../application/services/email-service.js';
 
 export class BookingController {
   constructor(
     private readonly service: BookingService,
-    private readonly broadcast: Broadcast
+    private readonly broadcast: Broadcast,
+    private readonly emailService: EmailService
   ) {}
 
   async create(req: Request, res: Response) {
@@ -21,7 +23,6 @@ export class BookingController {
     const { roomId, showtimeId, seatId, userId } = input.data;
 
     const booking = await this.service.book({
-      id: crypto.randomUUID(),
       roomId,
       showtimeId,
       seatId,
@@ -30,6 +31,9 @@ export class BookingController {
     });
 
     this.broadcast.emitSeatBooked(roomId, seatId, userId);
+
+    const bookingDetails = await this.service.getBookingDetails(booking.id);
+    await this.emailService.sendBookingConfirmation(userId, bookingDetails);
 
     return res.status(201).json(booking);
   }

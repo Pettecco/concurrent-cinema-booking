@@ -13,55 +13,55 @@ export class BookingService {
     private readonly lockService: ILockService
   ) {}
 
-  async book(booking: Booking): Promise<Booking> {
-    const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
+  async book(input: Omit<Booking, 'id'>): Promise<Booking> {
+    const lockKey = `lock:${input.roomId}:${input.showtimeId}:${input.seatId}`;
 
     logger.info(
-      { lockKey, userId: booking.userId },
+      { lockKey, userId: input.userId },
       'Verifying lock for booking'
     );
 
-    const hasValidLock = await this.lockService.verify(lockKey, booking.userId);
+    const hasValidLock = await this.lockService.verify(lockKey, input.userId);
     if (!hasValidLock) {
       logger.warn(
         {
           lockKey,
-          userId: booking.userId,
-          roomId: booking.roomId,
-          showtimeId: booking.showtimeId,
-          seatId: booking.seatId,
+          userId: input.userId,
+          roomId: input.roomId,
+          showtimeId: input.showtimeId,
+          seatId: input.seatId,
         },
         'Booking attempted without valid lock'
       );
-      throw new SeatNotLockedError(booking.roomId, booking.seatId);
+      throw new SeatNotLockedError(input.roomId, input.seatId);
     }
 
     logger.info(
-      { lockKey, userId: booking.userId },
+      { lockKey, userId: input.userId },
       'Lock verified successfully'
     );
 
-    const created = await this.bookingRepository.book(booking);
+    const created = await this.bookingRepository.book(input);
 
     if (!created) {
       logger.warn(
-        { roomId: booking.roomId, showtimeId: booking.showtimeId, seatId: booking.seatId },
+        { roomId: input.roomId, showtimeId: input.showtimeId, seatId: input.seatId },
         'Seat already booked'
       );
-      throw new SeatAlreadyBookedError(booking.roomId, booking.seatId);
+      throw new SeatAlreadyBookedError(input.roomId, input.seatId);
     }
 
     logger.info(
       {
         bookingId: created.id,
-        roomId: booking.roomId,
-        showtimeId: booking.showtimeId,
-        seatId: booking.seatId,
+        roomId: input.roomId,
+        showtimeId: input.showtimeId,
+        seatId: input.seatId,
       },
       'Booking created successfully, releasing lock'
     );
 
-    await this.lockService.release(lockKey, booking.userId);
+    await this.lockService.release(lockKey, input.userId);
 
     logger.info(
       { bookingId: created.id, lockKey },
@@ -80,5 +80,9 @@ export class BookingService {
     seatId: string
   ): Promise<Booking | null> {
     return this.bookingRepository.findBySeat(roomId, seatId);
+  }
+
+  async getBookingDetails(bookingId: string) {
+    return this.bookingRepository.getBookingDetails(bookingId);
   }
 }

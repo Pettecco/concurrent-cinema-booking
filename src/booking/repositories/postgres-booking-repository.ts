@@ -61,7 +61,7 @@ export class PostgresBookingRepository implements IBookingRepository {
     };
   }
 
-  async book(booking: Booking): Promise<Booking | null> {
+  async book(booking: Omit<Booking, 'id'>): Promise<Booking | null> {
     return this.db.transaction(async trx => {
       const existing = await trx('bookings')
         .where({ showtime_id: booking.showtimeId, seat_id: booking.seatId })
@@ -81,16 +81,42 @@ export class PostgresBookingRepository implements IBookingRepository {
           user_id: booking.userId,
           status: booking.status,
         })
-        .returning('*');
+        .returning('id');
 
       return {
         id: inserted.id,
-        roomId: inserted.room_id,
-        showtimeId: inserted.showtime_id,
-        seatId: inserted.seat_id,
-        userId: inserted.user_id,
-        status: inserted.status,
+        roomId: booking.roomId,
+        showtimeId: booking.showtimeId,
+        seatId: booking.seatId,
+        userId: booking.userId,
+        status: booking.status,
       };
     });
+  }
+
+  async getBookingDetails(bookingId: string) {
+    const result = await this.db
+      .select<{
+        movie_title: string;
+        start_time: string;
+        seat_id: string;
+      }>('m.title as movie_title', 's.start_time as start_time', 'b.seat_id')
+      .from('bookings as b')
+      .join('showtimes as s', 'b.showtime_id', 's.id')
+      .join('rooms as r', 's.room_id', 'r.id')
+      .join('movies as m', 'r.movie_id', 'm.id')
+      .where('b.id', bookingId)
+      .first();
+
+    if (!result) {
+      throw new Error('Booking not found');
+    }
+
+    return {
+      movieTitle: result.movie_title,
+      showtime: result.start_time,
+      seatId: result.seat_id,
+      bookingId,
+    };
   }
 }

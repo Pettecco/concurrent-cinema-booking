@@ -327,6 +327,9 @@ pnpm dev
 | `DB_NAME`    | Nome do banco de dados             | `cinema_booking` |
 | `REDIS_HOST` | Host da instância Redis            | `localhost`      |
 | `REDIS_PORT` | Porta da instância Redis           | `6379`           |
+| `SMTP_HOST`  | Host do servidor SMTP (Mailhog)    | `localhost`      |
+| `SMTP_PORT`  | Porta do servidor SMTP             | `1025`           |
+| `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |
 
 ### WebSocket Events
 
@@ -389,4 +392,47 @@ pnpm cleanup  # limpa banco e Redis
 
 - Usuário 1 pode travar `A1` às **14:00**
 - Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
+
+## Envio de E-mail
+
+O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usando **BullMQ** + **Mailhog**.
+
+### Fluxo
+
+```
+┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
+│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
+└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
+                                                          │
+                                                          │ async
+                                                          ▼
+                                                   ┌─────────────┐
+                                                   │  Mailhog    │
+                                                   │  (SMTP)     │
+                                                   └─────────────┘
+```
+
+### Serviços
+
+- **BullMQ**: Gerencia fila de jobs no Redis
+- **Nodemailer**: Envia e-mails via SMTP
+- **Mailhog**: Servidor SMTP fake para desenvolvimento
+
+### Acessar e-mails
+
+```bash
+# Subir Mailhog
+docker-compose up -d mailhog
+
+# Acessar interface web
+http://localhost:8025
+```
+
+### Variáveis de ambiente
+
+```env
+SMTP_HOST=localhost
+SMTP_PORT=1025
+EMAIL_FROM=Cinema <noreply@cinema.com>
+```
 - Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
