@@ -18,11 +18,12 @@ export class BookingController {
       return res.status(400).json({ errors: input.error.issues });
     }
 
-    const { roomId, seatId, userId } = input.data;
+    const { roomId, showtimeId, seatId, userId } = input.data;
 
     const booking = await this.service.book({
       id: crypto.randomUUID(),
       roomId,
+      showtimeId,
       seatId,
       userId,
       status: 'CONFIRMED',

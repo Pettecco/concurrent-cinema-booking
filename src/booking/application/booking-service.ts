@@ -14,7 +14,7 @@ export class BookingService {
   ) {}
 
   async book(booking: Booking): Promise<Booking> {
-    const lockKey = `lock:${booking.roomId}:${booking.seatId}`;
+    const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
 
     logger.info(
       { lockKey, userId: booking.userId },
@@ -28,6 +28,7 @@ export class BookingService {
           lockKey,
           userId: booking.userId,
           roomId: booking.roomId,
+          showtimeId: booking.showtimeId,
           seatId: booking.seatId,
         },
         'Booking attempted without valid lock'
@@ -44,7 +45,7 @@ export class BookingService {
 
     if (!created) {
       logger.warn(
-        { roomId: booking.roomId, seatId: booking.seatId },
+        { roomId: booking.roomId, showtimeId: booking.showtimeId, seatId: booking.seatId },
         'Seat already booked'
       );
       throw new SeatAlreadyBookedError(booking.roomId, booking.seatId);
@@ -54,6 +55,7 @@ export class BookingService {
       {
         bookingId: created.id,
         roomId: booking.roomId,
+        showtimeId: booking.showtimeId,
         seatId: booking.seatId,
       },
       'Booking created successfully, releasing lock'

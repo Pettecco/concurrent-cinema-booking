@@ -9,11 +9,12 @@ export class MemoryBookingRepository implements IBookingRepository {
     const created: Booking = {
       id: booking.id ?? randomUUID(),
       roomId: booking.roomId,
+      showtimeId: booking.showtimeId,
       seatId: booking.seatId,
       userId: booking.userId,
       status: booking.status,
     };
-    const uniqueKey = `${booking.roomId}:${booking.seatId}`;
+    const uniqueKey = `${booking.id}`;
     this.store.set(uniqueKey, created);
     return created;
   }
@@ -23,18 +24,20 @@ export class MemoryBookingRepository implements IBookingRepository {
   }
 
   async findBySeat(roomId: string, seatId: string): Promise<Booking | null> {
-    const uniqueKey = `${roomId}:${seatId}`;
-    return this.store.get(uniqueKey) ?? null;
+    const entries = Array.from(this.store.entries());
+    const found = entries.find(([_, b]) => b.roomId === roomId && b.seatId === seatId);
+    return found ? found[1] : null;
   }
 
   async book(booking: Booking): Promise<Booking | null> {
-    const uniqueKey = `${booking.roomId}:${booking.seatId}`;
+    const uniqueKey = `${booking.showtimeId}:${booking.seatId}`;
     if (this.store.has(uniqueKey)) {
       return null;
     }
     const created: Booking = {
       id: booking.id ?? randomUUID(),
       roomId: booking.roomId,
+      showtimeId: booking.showtimeId,
       seatId: booking.seatId,
       userId: booking.userId,
       status: booking.status,
