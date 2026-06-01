@@ -45,7 +45,11 @@ export class BookingService {
 
     if (!created) {
       logger.warn(
-        { roomId: input.roomId, showtimeId: input.showtimeId, seatId: input.seatId },
+        {
+          roomId: input.roomId,
+          showtimeId: input.showtimeId,
+          seatId: input.seatId,
+        },
         'Seat already booked'
       );
       throw new SeatAlreadyBookedError(input.roomId, input.seatId);
