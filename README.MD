@@ -179,23 +179,6 @@ SET lock:room-1:showtime-14h:A1 user-123 PX 300000 NX
 
 ### Arquitetura Multi-Instância
 
-```
-                     Load Balancer
-                           │
-         ┌─────────────────┼─────────────────┐
-         │                 │                 │
-     ┌───▼───┐        ┌───▼───┐        ┌───▼───┐
-     │Node A │        │Node B │        │Node C │
-     └───┬───┘        └───┬───┘        └───┬───┘
-         │                │                │
-         └────────────────┼────────────────┘
-                          │
-                   ┌──────▼──────┐
-                   │    Redis    │
-                   │(lock shared)│
-                   └─────────────┘
-```
-
 **Locks são específicos por showtime:**
 
 - `lock:room1:showtime-14h:A1` → Usuário 1 pode travar
@@ -206,71 +189,100 @@ Todas as instâncias respeitam o mesmo lock.
 
 ## Arquitetura
 
-**Camadas:**
-
-- **Presentation:** Controllers, Routes, Schemas (Zod)
-- **Application:** BookingService (regras de negócio)
-- **Domain:** Interfaces e Entities
-- **Infrastructure:** Postgres, Redis, WebSocket, Logger
-
-### Camadas (Clean Architecture)
+### Visão Geral do Sistema
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   PRESENTATION LAYER                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  Booking     │  │    Lock      │  │   Health     │   │
-│  │  Controller  │  │  Controller  │  │  Controller  │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-│  ┌──────────────┐  ┌──────────────┐                     │
-│  │    Routes    │  │   Schemas    │                     │
-│  │              │  │    (Zod)     │                     │
-│  └──────────────┘  └──────────────┘                     │
-└─────────────────────────────────────────────────────────┘
-                        │ uses
-                        ↓
-┌─────────────────────────────────────────────────────────┐
-│                   APPLICATION LAYER                     │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              BookingService                      │   │
-│  │ - book(booking)         → Regra: lock obrigatório│   │
-│  │ - listBookings(movieId) → Regra: verifica owner  │   │
-│  │ - findBookingBySeat()   → Regra: libera após ok  │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                        │ uses
-                        ↓
-┌─────────────────────────────────────────────────────────┐
-│                     DOMAIN LAYER                        │
-│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
-│  │ IBooking       │  │ ILock          │  │  Domain  │   │
-│  │ Repository     │  │ Service        │  │  Errors  │   │
-│  │ (interface)    │  │ (interface)    │  │          │   │
-│  └────────────────┘  └────────────────┘  └──────────┘   │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              Entities                            │   │
-│  │  - Booking (id, movieId, seatId, userId, status) │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                        ↑ implements
-                        │
-┌─────────────────────────────────────────────────────────┐
-│                  INFRASTRUCTURE LAYER                   │
-│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
-│  │ Postgres       │  │ Redis          │  │ WebSocket│   │
-│  │ Repository     │  │ Lock Service   │  │ Server   │   │
-│  │ (Knex + pg)    │  │ (ioredis)      │  │ (ws)     │   │
-│  └────────────────┘  └────────────────┘  └──────────┘   │
-│  ┌────────────────┐  ┌────────────────┐  ┌──────────┐   │
-│  │ Memory         │  │ Memory         │  │ Redis    │   │
-│  │ Repository     │  │ Lock Service   │  │ Keyspace │   │
-│  │ (testes)       │  │ (testes)       │  │ Listener │   │
-│  └────────────────┘  └────────────────┘  └──────────┘   │
-│  ┌────────────────┐  ┌────────────────┐                 │
-│  │ Pino           │  │ Error          │                 │
-│  │ Logger         │  │ Handler        │                 │
-│  └────────────────┘  └────────────────┘                 │
-└─────────────────────────────────────────────────────────┘
+                                       ┌─────────────────┐
+                                       │   Load Balancer │
+                                       │     (nginx)     │
+                                       └────────┬────────┘
+                                                │
+               ┌────────────────────────────────┼────────────────────────────────┐
+               │                                │                                │
+               ▼                                ▼                                ▼
+      ┌────────────────┐              ┌────────────────┐              ┌────────────────┐
+      │  Node.js #1    │              │  Node.js #2    │              │  Node.js #N    │
+      │  ┌──────────┐  │              │  ┌──────────┐  │              │  ┌──────────┐  │
+      │  │ Express  │  │              │  │ Express  │  │              │  │ Express  │  │
+      │  │   HTTP   │  │              │  │   HTTP   │  │              │  │   HTTP   │  │
+      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
+      │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
+      │  │ WebSocket│  │              │  │ WebSocket│  │              │  │ WebSocket│  │
+      │  │ (Socket) │  │              │  │ (Socket) │  │              │  │ (Socket) │  │
+      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
+      │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
+      │  │ BullMQ   │  │              │  │ BullMQ   │  │              │  │ BullMQ   │  │
+      │  │ Producer │  │              │  │ Producer │  │              │  │ Producer │  │
+      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
+      └───────┼────────┘              └───────┼────────┘              └───────┼────────┘
+              │                               │                               │
+              └───────────────────────────────┼───────────────────────────────┘
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    │                         │                         │
+                    ▼                         ▼                         ▼
+           ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
+           │     Redis      │       │   PostgreSQL   │       │  Worker Node   │
+           │   ┌────────┐   │       │   ┌────────┐   │       │  ┌──────────┐  │
+           │   │ Locks  │   │       │   │Movies  │   │       │  │ BullMQ   │  │
+           │   │Pub/Sub │   │       │   │Bookings│   │       │  │ Consumer │  │
+           │   │Events  │   │       │   │Rooms   │   │       │  └────┬─────┘  │
+           │   │Sessions│   │       │   │Showtime│   │       │       │        │
+           │   │Queues  │   │       │   └────────┘   │       │       ▼        │
+           │   │ (Bull) │   │       └────────────────┘       │  ┌──────────┐  │
+           │   └────────┘   │                                │  │   Jobs   │  │
+           └────────────────┘                                │  │ - Audit  │  │
+                                                             │  │ - Email  │  │
+                                                             │  └──────────┘  │
+                                                             └────────────────┘
+```
+
+### Schema do Banco de Dados
+
+![Database Schema](src/infra/postgres/db.png)
+
+### Fluxo de Lock com Redis
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        LOCK ACQUISITION FLOW                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────┐
+  │ Client  │
+  └────┬────┘
+       │ POST /locks {roomId, showtimeId, seatId}
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                     Lock Service                                │
+  │  ┌───────────────────────────────────────────────────────────┐  │
+  │  │  lockKey = `lock:${roomId}:${showtimeId}:${seatId}`       │  │
+  │  │  SET lockKey userId PX 300000 NX                          │  │
+  │  └───────────────────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────────────┘
+       │
+       │  ┌─────────────────────────────────────────────────────────┐
+       ├──┤ 1. NX → Only if Not eXists (cria se não existir)        │
+       │  │ 2. PX → Expiração em 5 minutos (TTL)                    │
+       │  └─────────────────────────────────────────────────────────┘
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                         REDIS                                   │
+  │  ┌───────────────────────────────────────────────────────────┐  │
+  │  │  lock:room-1:show-14h:A1 → "user-123" (TTL: 300s)         │  │
+  │  └───────────────────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────────────┘
+       │
+       │  ┌─────────────────────────────────────────────────────────┐
+       ├──┤ Broadcast via Socket.IO + Redis Adapter                 │
+       │  └─────────────────────────────────────────────────────────┘
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                    ALL CONNECTED CLIENTS                        │
+  │  ┌───────────────────────────────────────────────────────────┐  │
+  │  │  { type: "SEAT_SELECTED", seatId: "A1", expiresAt: ... }  │  │
+  │  └───────────────────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Tecnologias
@@ -320,11 +332,11 @@ pnpm dev
 
 **Conexão:** `ws://localhost:3000/ws` (mesma porta do HTTP + path `/ws`)
 
-| Evento          | Direção         | Payload                                | Descrição      |
-| --------------- | --------------- | -------------------------------------- | -------------- |
+| Evento          | Direção         | Payload                                           | Descrição      |
+| --------------- | --------------- | ------------------------------------------------- | -------------- |
 | `SEAT_SELECTED` | Server → Client | `{roomId, showtimeId, seatId, userId, expiresAt}` | Lock adquirido |
-| `SEAT_BOOKED`   | Server → Client | `{roomId, showtimeId, seatId, bookingId}` | Reserva criada |
-| `SEAT_RELEASED` | Server → Client | `{roomId, showtimeId, seatId}`         | Lock liberado  |
+| `SEAT_BOOKED`   | Server → Client | `{roomId, showtimeId, seatId, bookingId}`         | Reserva criada |
+| `SEAT_RELEASED` | Server → Client | `{roomId, showtimeId, seatId}`                    | Lock liberado  |
 
 **Exemplo de evento:**
 
@@ -335,7 +347,7 @@ pnpm dev
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
-  "bookingId": "uuid-123"
+  "bookingId": "a3f8c2d1-5e7b-4f9a-8c6d-1b2e3f4a5b6c"
 }
 ```
 
@@ -374,6 +386,7 @@ pnpm cleanup  # limpa banco e Redis
 4. `POST /bookings` → verifica lock → cria booking no Postgres (FK para showtime) → libera lock → broadcast `SEAT_BOOKED`
 
 **Importante:** O lock é específico por **showtime**, então:
-- ✅ Usuário 1 pode travar `A1` às **14:00**
-- ✅ Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
-- ❌ Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
+
+- Usuário 1 pode travar `A1` às **14:00**
+- Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
+- Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
