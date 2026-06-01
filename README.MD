@@ -224,12 +224,12 @@ Todas as instâncias respeitam o mesmo lock.
            ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
            │     Redis      │       │   PostgreSQL   │       │  Worker Node   │
            │   ┌────────┐   │       │   ┌────────┐   │       │  ┌──────────┐  │
-           │   │ Locks  │   │       │   │Movies  │   │       │  │ BullMQ   │  │
+           │   │Locks   │   │       │   │Movies  │   │       │  │ BullMQ   │  │
            │   │Pub/Sub │   │       │   │Bookings│   │       │  │ Consumer │  │
            │   │Events  │   │       │   │Rooms   │   │       │  └────┬─────┘  │
            │   │Sessions│   │       │   │Showtime│   │       │       │        │
            │   │Queues  │   │       │   └────────┘   │       │       ▼        │
-           │   │ (Bull) │   │       └────────────────┘       │  ┌──────────┐  │
+           │   │(BullMQ)│   │       └────────────────┘       │  ┌──────────┐  │
            │   └────────┘   │                                │  │   Jobs   │  │
            └────────────────┘                                │  │ - Audit  │  │
                                                              │  │ - Email  │  │
@@ -319,16 +319,16 @@ pnpm dev
 
 **Variáveis de ambiente:**
 
-| Variável     | Descrição                          | Exemplo          |
-| ------------ | ---------------------------------- | ---------------- |
-| `PORT`       | Porta em que a API será iniciada   | `3000`           |
-| `DB_HOST`    | Host do banco de dados PostgreSQL  | `localhost`      |
-| `DB_PORT`    | Porta do banco de dados PostgreSQL | `5432`           |
-| `DB_NAME`    | Nome do banco de dados             | `cinema_booking` |
-| `REDIS_HOST` | Host da instância Redis            | `localhost`      |
-| `REDIS_PORT` | Porta da instância Redis           | `6379`           |
-| `SMTP_HOST`  | Host do servidor SMTP (Mailhog)    | `localhost`      |
-| `SMTP_PORT`  | Porta do servidor SMTP             | `1025`           |
+| Variável     | Descrição                          | Exemplo                       |
+| ------------ | ---------------------------------- | ----------------------------- |
+| `PORT`       | Porta em que a API será iniciada   | `3000`                        |
+| `DB_HOST`    | Host do banco de dados PostgreSQL  | `localhost`                   |
+| `DB_PORT`    | Porta do banco de dados PostgreSQL | `5432`                        |
+| `DB_NAME`    | Nome do banco de dados             | `cinema_booking`              |
+| `REDIS_HOST` | Host da instância Redis            | `localhost`                   |
+| `REDIS_PORT` | Porta da instância Redis           | `6379`                        |
+| `SMTP_HOST`  | Host do servidor SMTP (Mailhog)    | `localhost`                   |
+| `SMTP_PORT`  | Porta do servidor SMTP             | `1025`                        |
 | `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |
 
 ### WebSocket Events
@@ -435,4 +435,5 @@ SMTP_HOST=localhost
 SMTP_PORT=1025
 EMAIL_FROM=Cinema <noreply@cinema.com>
 ```
+
 - Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
