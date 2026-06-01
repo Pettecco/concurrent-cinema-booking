@@ -12,6 +12,7 @@ export class PostgresBookingRepository implements IBookingRepository {
         showtime_id: booking.showtimeId,
         seat_id: booking.seatId,
         user_id: booking.userId,
+        email: booking.email,
         status: booking.status,
       })
       .returning('*');
@@ -22,6 +23,7 @@ export class PostgresBookingRepository implements IBookingRepository {
       showtimeId: inserted.showtime_id,
       seatId: inserted.seat_id,
       userId: inserted.user_id,
+      email: inserted.email,
       status: inserted.status,
     };
   }
@@ -29,14 +31,23 @@ export class PostgresBookingRepository implements IBookingRepository {
   async findByRoomId(roomId: string): Promise<Booking[]> {
     const rows = await this.db('bookings')
       .where({ room_id: roomId })
-      .select('id', 'room_id', 'showtime_id', 'seat_id', 'user_id', 'status');
+      .select(
+        'id',
+        'room_id',
+        'showtime_id',
+        'seat_id',
+        'user_id',
+        'email',
+        'status'
+      );
 
-    return rows.map(row => ({
+    return rows.map((row) => ({
       id: row.id,
       roomId: row.room_id,
       showtimeId: row.showtime_id,
       seatId: row.seat_id,
       userId: row.user_id,
+      email: row.email,
       status: row.status,
     }));
   }
@@ -44,7 +55,15 @@ export class PostgresBookingRepository implements IBookingRepository {
   async findBySeat(roomId: string, seatId: string): Promise<Booking | null> {
     const booking = await this.db('bookings')
       .where({ room_id: roomId, seat_id: seatId })
-      .select('id', 'room_id', 'showtime_id', 'seat_id', 'user_id', 'status')
+      .select(
+        'id',
+        'room_id',
+        'showtime_id',
+        'seat_id',
+        'user_id',
+        'email',
+        'status'
+      )
       .first();
 
     if (!booking) {
@@ -57,12 +76,13 @@ export class PostgresBookingRepository implements IBookingRepository {
       showtimeId: booking.showtime_id,
       seatId: booking.seat_id,
       userId: booking.user_id,
+      email: booking.email,
       status: booking.status,
     };
   }
 
   async book(booking: Omit<Booking, 'id'>): Promise<Booking | null> {
-    return this.db.transaction(async trx => {
+    return this.db.transaction(async (trx) => {
       const existing = await trx('bookings')
         .where({ showtime_id: booking.showtimeId, seat_id: booking.seatId })
         .select('id')
