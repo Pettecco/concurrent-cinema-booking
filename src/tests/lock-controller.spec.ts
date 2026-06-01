@@ -67,7 +67,8 @@ describe('LockController', () => {
       expect(broadcast.emitSeatLocked).toHaveBeenCalledWith(
         roomId,
         seatId,
-        userId
+        userId,
+        expect.any(Date)
       );
     });
 
@@ -130,7 +131,7 @@ describe('LockController', () => {
 
       await controller.release(req, res);
 
-      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(roomId, 'A1', userId);
+      expect(broadcast.emitSeatReleased).toHaveBeenCalledWith(roomId, 'A1');
     });
 
     it('returns 403 when user does not own the lock', async () => {

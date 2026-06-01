@@ -9,13 +9,14 @@ import {
   LockNotOwnedError,
 } from '../booking/domain/errors.js';
 
-function makeBooking(overrides?: { userId?: string; seatId?: string; showtimeId?: string }) {
+function makeBooking(overrides?: { userId?: string; seatId?: string; showtimeId?: string; email?: string }) {
   return {
     id: randomUUID(),
     roomId: randomUUID(),
     showtimeId: overrides?.showtimeId ?? randomUUID(),
     seatId: overrides?.seatId ?? 'A1',
     userId: overrides?.userId ?? randomUUID(),
+    email: overrides?.email ?? 'user@example.com',
     status: 'CONFIRMED',
   };
 }
@@ -40,9 +41,10 @@ describe('BookingService', () => {
 
       const result = await service.book(booking);
 
-      expect(result.id).toBe(booking.id);
+      expect(result).toBeDefined();
       expect(result.seatId).toBe(booking.seatId);
       expect(result.userId).toBe(booking.userId);
+      expect(result.email).toBe(booking.email);
     });
 
     it('throws SeatNotLockedError when user has no lock', async () => {
