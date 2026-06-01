@@ -137,11 +137,12 @@ async book(booking: Booking): Promise<Booking> {
 
 ---
 
-#### 3. Redis Lock Distribuído
+#### 3. Redis Lock Distribuído (por showtime)
 
 ```ts
 async book(booking: Booking): Promise<Booking> {
-  const lockKey = `lock:${booking.movieId}:${booking.seatId}`;
+  // Lock é específico por sala + horário + assento
+  const lockKey = `lock:${booking.roomId}:${booking.showtimeId}:${booking.seatId}`;
 
   const acquired = await redis.set(lockKey, userId, 'PX', 300000, 'NX');
   if (!acquired) {
@@ -159,7 +160,7 @@ async book(booking: Booking): Promise<Booking> {
 **Comando Redis:**
 
 ```bash
-SET lock:screen-1:A1 user-123 PX 300000 NX
+SET lock:room-1:showtime-14h:A1 user-123 PX 300000 NX
 ```
 
 **Flags:**
@@ -194,6 +195,12 @@ SET lock:screen-1:A1 user-123 PX 300000 NX
                    │(lock shared)│
                    └─────────────┘
 ```
+
+**Locks são específicos por showtime:**
+
+- `lock:room1:showtime-14h:A1` → Usuário 1 pode travar
+- `lock:room1:showtime-17h:A1` → Usuário 2 pode travar **ao mesmo tempo**
+- `lock:room1:showtime-14h:A1` → Usuário 3 **não consegue** (já travado)
 
 Todas as instâncias respeitam o mesmo lock.
 
@@ -315,9 +322,9 @@ pnpm dev
 
 | Evento          | Direção         | Payload                                | Descrição      |
 | --------------- | --------------- | -------------------------------------- | -------------- |
-| `SEAT_SELECTED` | Server → Client | `{movieId, seatId, userId, expiresAt}` | Lock adquirido |
-| `SEAT_BOOKED`   | Server → Client | `{movieId, seatId, bookingId}`         | Reserva criada |
-| `SEAT_RELEASED` | Server → Client | `{movieId, seatId}`                    | Lock liberado  |
+| `SEAT_SELECTED` | Server → Client | `{roomId, showtimeId, seatId, userId, expiresAt}` | Lock adquirido |
+| `SEAT_BOOKED`   | Server → Client | `{roomId, showtimeId, seatId, bookingId}` | Reserva criada |
+| `SEAT_RELEASED` | Server → Client | `{roomId, showtimeId, seatId}`         | Lock liberado  |
 
 **Exemplo de evento:**
 
@@ -325,7 +332,8 @@ pnpm dev
 {
   "type": "SEAT_BOOKED",
   "occurredAt": "2026-05-27T14:00:00.000Z",
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
+  "roomId": "660e8400-e29b-41d4-a716-446655440001",
+  "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
   "bookingId": "uuid-123"
 }
@@ -343,13 +351,14 @@ pnpm cleanup  # limpa banco e Redis
 
 ## Decisões de Design
 
-| Decisão                          | Razão                                                       |
-| -------------------------------- | ----------------------------------------------------------- |
-| Lock obrigatório                 | Previne race conditions, dá feedback imediato ao usuário    |
-| TTL de 5 minutos                 | Tempo razoável para completar booking, previne locks órfãos |
-| Liberação automática pós-booking | Garante cleanup, evita chamadas manuais                     |
-| Validação de ownership           | Previne que usuário A libere lock do usuário B              |
-| WebSocket + Keyspace Events      | Notificação em tempo real sem polling                       |
+| Decisão                          | Razão                                                                 |
+| -------------------------------- | --------------------------------------------------------------------- |
+| Lock por showtime                | Mesmo assento pode ser travado em horários diferentes simultaneamente |
+| Lock obrigatório                 | Previne race conditions, dá feedback imediato ao usuário              |
+| TTL de 5 minutos                 | Tempo razoável para completar booking, previne locks órfãos           |
+| Liberação automática pós-booking | Garante cleanup, evita chamadas manuais                               |
+| Validação de ownership           | Previne que usuário A libere lock do usuário B                        |
+| WebSocket + Keyspace Events      | Notificação em tempo real sem polling                                 |
 
 ## Pub/Sub e Keyspace Events
 
@@ -359,6 +368,12 @@ pnpm cleanup  # limpa banco e Redis
 
 **Fluxo:**
 
-1. `POST /locks` → Redis SET com TTL 5min → broadcast `SEAT_SELECTED`
-2. TTL expira → Keyspace Event notifica → broadcast `LOCK_EXPIRED`
-3. `POST /bookings` → verifica lock → cria booking no Postgres → libera lock → broadcast `SEAT_BOOKED`
+1. Usuário seleciona **sala + horário (showtime)** → vê assentos disponíveis
+2. `POST /locks` com `{roomId, showtimeId, seatId}` → Redis SET `lock:roomId:showtimeId:seatId` com TTL 5min → broadcast `SEAT_SELECTED`
+3. TTL expira → Keyspace Event notifica → broadcast `LOCK_EXPIRED`
+4. `POST /bookings` → verifica lock → cria booking no Postgres (FK para showtime) → libera lock → broadcast `SEAT_BOOKED`
+
+**Importante:** O lock é específico por **showtime**, então:
+- ✅ Usuário 1 pode travar `A1` às **14:00**
+- ✅ Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
+- ❌ Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
