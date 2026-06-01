@@ -27,7 +27,7 @@ Começamos com um store in-memory usando `Map`:
 private bookings = new Map<string, Booking>();
 ```
 
-Cada reserva usa uma chave:
+Cada reserva usa uma chave única:
 
 ```ts
 const key = `${booking.movieId}:${booking.seatId}`; // ex: "screen-1:A1"
@@ -178,54 +178,33 @@ SET lock:screen-1:A1 user-123 PX 300000 NX
 
 ### Arquitetura Multi-Instância
 
-```txt
-                    Load Balancer
+```
+                     Load Balancer
+                           │
+         ┌─────────────────┼─────────────────┐
+         │                 │                 │
+     ┌───▼───┐        ┌───▼───┐        ┌───▼───┐
+     │Node A │        │Node B │        │Node C │
+     └───┬───┘        └───┬───┘        └───┬───┘
+         │                │                │
+         └────────────────┼────────────────┘
                           │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-    ┌───▼───┐        ┌───▼───┐        ┌───▼───┐
-    │Node A │        │Node B │        │Node C │
-    └───┬───┘        └───┬───┘        └───┬───┘
-        │                │                │
-        └────────────────┼────────────────┘
-                         │
-                  ┌──────▼──────┐
-                  │    Redis    │
-                  │(lock shared)│
-                  └─────────────┘
+                   ┌──────▼──────┐
+                   │    Redis    │
+                   │(lock shared)│
+                   └─────────────┘
 ```
 
-Agora todas as instâncias respeitam o mesmo lock.
+Todas as instâncias respeitam o mesmo lock.
 
-## Arquitetura Atual
+## Arquitetura
 
-### Visão Geral
+**Camadas:**
 
-```
-┌─────────────────────────────────────────────────────┐
-│              FRONTEND (Browser)                     │
-│         HTTP Requests + WebSocket Connection        │
-└─────────────────────────────────────────────────────┘
-           │                        │
-           │ HTTP                   │ WebSocket
-           ↓                        ↑
-┌─────────────────────────────────────────────────────┐
-│              BACKEND (Node.js + Express)            │
-│  ┌───────────────┐  ┌─────────────────────────────┐ │
-│  │ HTTP Routes   │  │ WebSocket Server            │ │
-│  │ POST /locks   │  │ - Broadcast events          │ │
-│  │ POST /bookings│  │ - Redis Keyspace Events     │ │
-│  └───────────────┘  └─────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-           │                        │
-           ↓                        ↓
-┌──────────────────┐     ┌──────────────────┐
-│   PostgreSQL     │     │     Redis        │
-│   (Bookings)     │     │ (Locks + Events) │
-└──────────────────┘     └──────────────────┘
-```
-
----
+- **Presentation:** Controllers, Routes, Schemas (Zod)
+- **Application:** BookingService (regras de negócio)
+- **Domain:** Interfaces e Entities
+- **Infrastructure:** Postgres, Redis, WebSocket, Logger
 
 ### Camadas (Clean Architecture)
 
@@ -289,186 +268,50 @@ Agora todas as instâncias respeitam o mesmo lock.
 
 ## Tecnologias
 
-| Tecnologia                                                                                                                  | Descrição                      |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" width="16"/> Node.js               | Runtime JavaScript no servidor |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="16"/> TypeScript    | Linguagem com tipagem estática |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pnpm/pnpm-original.svg" width="16"/> pnpm                      | Package manager rápido         |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" width="16"/> Express 5           | Framework HTTP                 |
-| <img src="https://raw.githubusercontent.com/colinhacks/zod/main/logo.svg" width="16"/> Zod                                  | Validação de schemas           |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="16"/> PostgreSQL 16 | Banco relacional               |
-| <img src="https://knexjs.org/favicon.svg" width="16"/> Knex                                                                 | Query builder e migrations     |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" width="16"/> Redis 7                 | Cache e locks distribuídos     |
-| <img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Socket-io.svg" width="16"/> WebSocket 8                       | Conexão persistente            |
-| <img src="https://raw.githubusercontent.com/pinojs/pino/main/favicon.ico" width="16"/> Pino 10                              | Logger estruturado             |
-| <img src="https://raw.githubusercontent.com/pinojs/pino/main/favicon.ico" width="16"/> pino-http 11                         | Middleware de log HTTP         |
-| <img src="https://raw.githubusercontent.com/vitest-dev/vitest/main/docs/public/logo.svg" width="16"/> Vitest 4              | Framework de testes            |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="16"/> Docker                | Containers                     |
+| Tecnologia                                                                                                               | Versão | Descrição          |
+| ------------------------------------------------------------------------------------------------------------------------ | ------ | ------------------ |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" width="16"/> Node.js            | 22     | Runtime            |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="16"/> TypeScript | -      | Linguagem          |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" width="16"/> Express          | 5      | Framework HTTP     |
+| <img src="https://raw.githubusercontent.com/colinhacks/zod/main/logo.svg" width="16"/> Zod                               | -      | Validação          |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="16"/> PostgreSQL | 16     | Banco relacional   |
+| <img src="https://knexjs.org/favicon.svg" width="16"/> Knex                                                              | -      | Query builder      |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" width="16"/> Redis                | 7      | Locks distribuídos |
+| <img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Socket-io.svg" width="16"/> Socket.IO                      | 8      | WebSocket          |
+| <img src="https://raw.githubusercontent.com/pinojs/pino/main/favicon.ico" width="16"/> Pino                              | 10     | Logger             |
+| <img src="https://raw.githubusercontent.com/vitest-dev/vitest/main/docs/public/logo.svg" width="16"/> Vitest             | 4      | Testes             |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="16"/> Docker             | -      | Containers         |
 
 ## Setup
 
-### Pré-requisitos
-
-- Node.js v22+
-- pnpm v11+
-- Docker + Docker Compose
-
-### Instalação
+### Setup
 
 ```bash
-# Clonar repositório
 git clone <repo-url>
+
 cd concurrent-cinema-booking
 
-# Instalar dependências
+cp .env.example .env  # ajustar configuração
 pnpm install
-
-# Rodar containers (PostgreSQL + Redis)
 docker-compose up -d
-
-# Rodar migrations
 pnpm migrate:latest
-
-# Iniciar servidor (dev mode)
 pnpm dev
 ```
 
-O servidor estará disponível em `http://localhost:3000`
+**Variáveis de ambiente:**
 
-## API
-
-### HTTP Endpoints
-
-| Método   | Endpoint             | Descrição                | Status Codes               |
-| -------- | -------------------- | ------------------------ | -------------------------- |
-| `POST`   | `/locks`             | Adquire lock             | `200`, `400`, `409`        |
-| `DELETE` | `/locks`             | Libera lock              | `204`, `400`, `403`        |
-| `POST`   | `/bookings`          | Cria reserva             | `201`, `400`, `403`, `409` |
-| `GET`    | `/bookings/:movieId` | Lista reservas por filme | `200`                      |
-| `GET`    | `/health`            | Health check             | `200`                      |
-
----
-
-### POST /locks
-
-Adquire lock em um assento por 5 minutos.
-
-**Request:**
-
-```json
-{
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100"
-}
-```
-
-**Response (200):**
-
-```json
-{
-  "success": true,
-  "lockKey": "lock:550e8400-e29b-41d4-a716-446655440001:A1",
-  "expiresAt": "2026-05-27T15:05:00.000Z"
-}
-```
-
-**Response (409):**
-
-```json
-{
-  "error": {
-    "code": "SEAT_LOCKED",
-    "message": "Seat A1 is already locked"
-  }
-}
-```
-
----
-
-### DELETE /locks
-
-Libera lock de um assento.
-
-**Request:**
-
-```json
-{
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100"
-}
-```
-
-**Response (204):** `No Content`
-
-**Response (403):**
-
-```json
-{
-  "error": {
-    "code": "LOCK_NOT_OWNED",
-    "message": "Lock lock:... is not owned by user ..."
-  }
-}
-```
-
----
-
-### POST /bookings
-
-Cria reserva de assento (requer lock válido).
-
-**Request:**
-
-```json
-{
-  "movieId": "550e8400-e29b-41d4-a716-446655440001",
-  "seatId": "A1",
-  "userId": "550e8400-e29b-41d4-a716-446655440100",
-  "status": "CONFIRMED"
-}
-```
-
-**Response (201):**
-
-```json
-{
-  "id": "...",
-  "movieId": "...",
-  "seatId": "A1",
-  "userId": "...",
-  "status": "CONFIRMED"
-}
-```
-
-**Response (403):**
-
-```json
-{
-  "error": {
-    "code": "SEAT_NOT_LOCKED",
-    "message": "Seat A1 is not locked for movie ..."
-  }
-}
-```
-
-**Response (409):**
-
-```json
-{
-  "error": {
-    "code": "SEAT_ALREADY_BOOKED",
-    "message": "Seat A1 is already booked for movie ..."
-  }
-}
-```
-
----
+| Variável     | Descrição                          | Exemplo          |
+| ------------ | ---------------------------------- | ---------------- |
+| `PORT`       | Porta em que a API será iniciada   | `3000`           |
+| `DB_HOST`    | Host do banco de dados PostgreSQL  | `localhost`      |
+| `DB_PORT`    | Porta do banco de dados PostgreSQL | `5432`           |
+| `DB_NAME`    | Nome do banco de dados             | `cinema_booking` |
+| `REDIS_HOST` | Host da instância Redis            | `localhost`      |
+| `REDIS_PORT` | Porta da instância Redis           | `6379`           |
 
 ### WebSocket Events
 
-**Conexão:** `ws://localhost:3000`
+**Conexão:** `ws://localhost:3000/ws` (mesma porta do HTTP + path `/ws`)
 
 | Evento          | Direção         | Payload                                | Descrição      |
 | --------------- | --------------- | -------------------------------------- | -------------- |
@@ -488,144 +331,34 @@ Cria reserva de assento (requer lock válido).
 }
 ```
 
-## 🧪 Testes
+## Testes
 
 ```bash
-# Rodar todos os testes
 pnpm test
 
-# Limpar banco e Redis (útil entre testes manuais)
-pnpm cleanup
+pnpm cleanup  # limpa banco e Redis
 ```
 
-### Arquivos de Teste HTTP
-
-Use a extensão **REST Client** no VSCode:
-
-- `http/locks.http` - Testes de lock (acquire/release)
-- `http/booking-with-lock.http` - Fluxo completo de booking com lock
+**Testes manuais:** use os arquivos em `http/` com a extensão REST Client (VSCode).
 
 ## Decisões de Design
 
-### Por que Lock Obrigatório?
+| Decisão                          | Razão                                                       |
+| -------------------------------- | ----------------------------------------------------------- |
+| Lock obrigatório                 | Previne race conditions, dá feedback imediato ao usuário    |
+| TTL de 5 minutos                 | Tempo razoável para completar booking, previne locks órfãos |
+| Liberação automática pós-booking | Garante cleanup, evita chamadas manuais                     |
+| Validação de ownership           | Previne que usuário A libere lock do usuário B              |
+| WebSocket + Keyspace Events      | Notificação em tempo real sem polling                       |
 
-- Garante que nenhum booking seja criado sem exclusividade
-- Previne race conditions em multi-instância
-- Frontend tem feedback imediato (assento selecionado)
-- UX melhor (usuário sabe na hora se está disponível)
+## Pub/Sub e Keyspace Events
 
-### Por que TTL de 5 Minutos?
+**Pub/Sub (Socket.IO Redis Adapter):** sincroniza múltiplos servidores WebSocket. Quando um servidor faz `io.to(movieId).emit()`, o Redis distribui para todos os servidores com clients na sala `movieId`.
 
-- Tempo razoável pra usuário completar o booking
-- Previne locks órfãos (usuário abandona fluxo)
-- Redis expira automaticamente (sem cleanup manual)
-- Balanceia entre UX e throughput do sistema
+**Keyspace Events:** notificação automática do Redis quando uma chave expira. O listener em `keyspace-listener.ts` escuta `__keyevent@0__:expired`, extrai `movieId` e `seatId` da key `lock:{movie}:{seat}`, e faz broadcast via WebSocket.
 
-### Por que Liberação Automática?
+**Fluxo:**
 
-- Frontend não precisa chamar `DELETE /locks` manualmente
-- Garante que lock sempre é liberado (finally)
-
-### Por que Validar Ownership?
-
-- Previne que usuário A libere lock do usuário B
-- Segurança básica (sem autenticação completa)
-- Nível adicional de proteção contra bugs maliciosos
-- Audit trail (sabe quem tinha o lock)
-
-### Por que WebSocket + Redis Keyspace Events?
-
-- Notificação em tempo real pra todos os clientes
-- TTL expiry é detectado automaticamente
-- Frontend não precisa fazer polling
-- Menos tráfego de rede
-
-## Pub/Sub vs Keyspace Events
-
-### Qual a diferença?
-
-**Redis Pub/Sub** (Publish/Subscribe):
-
-- Você **publica** mensagens em um canal
-- Clients **inscritos** recebem a mensagem
-- **Use case:** broadcast manual de eventos
-
-```typescript
-// Publish
-await redis.publish(
-  'seat-events',
-  JSON.stringify({ type: 'BOOKED', seat: 'A1' })
-);
-
-// Subscribe
-const subscriber = redis.duplicate();
-await subscriber.subscribe('seat-events', message => {
-  console.log('Received:', message);
-});
-```
-
-**Redis Keyspace Events** (notificação automática):
-
-- Redis **notifica automaticamente** quando chaves mudam
-- **Use case:** TTL expiry, deletes, modificações
-
-```typescript
-// Habilitar keyspace events (redis.conf)
-notify-keyspace-events Ex  // Ex = events de expire
-
-// Ouvir eventos de expiração
-const sub = redis.duplicate();
-await sub.psubscribe('__keyevent@0__:expired', (key) => {
-  console.log('Key expired:', key);
-  // Broadcast WebSocket: "lock released"
-});
-```
-
-### O que usamos no projeto?
-
-**Ambos!**
-
-| Funcionalidade           | Implementação         | Por quê                                  |
-| ------------------------ | --------------------- | ---------------------------------------- |
-| Broadcast de eventos     | WebSocket Server      | Clients conectados recebem em tempo real |
-| TTL expiry detection     | Redis Keyspace Events | Lock expira → WebSocket avisa clients    |
-| Lock acquisition/release | Manual (código)       | Controle fino sobre quando broadcast     |
-
-### Fluxo Completo
-
-```
-1. User adquire lock → Redis SET
-2. Backend → WebSocket broadcast "SEAT_SELECTED"
-3. TTL expira (5 min) → Redis Keyspace Event
-4. Keyspace Listener → WebSocket broadcast "SEAT_RELEASED"
-5. Todos os clients atualizam UI
-```
-
-**Por que não só Pub/Sub?**
-
-- Pub/Sub não notifica TTL expiry automaticamente
-- Keyspace Events é mais confiável para locks
-- WebSocket é melhor pra comunicação com frontend (browser)
-
----
-
-## Scripts Disponíveis
-
-```bash
-# Desenvolvimento
-pnpm dev              # Inicia servidor em watch mode
-
-# Build
-pnpm build            # Compila TypeScript
-pnpm start            # Roda build em produção
-
-# Database
-pnpm migrate:make     # Cria nova migration
-pnpm migrate:latest   # Roda migrations pendentes
-pnpm migrate:rollback # Desfaz última migration
-pnpm migrate:status   # Mostra status das migrations
-
-# Utilitários
-pnpm cleanup          # Limpa banco e Redis
-pnpm test             # Roda testes
-```
+1. `POST /locks` → Redis SET com TTL 5min → broadcast `SEAT_SELECTED`
+2. TTL expira → Keyspace Event notifica → broadcast `LOCK_EXPIRED`
+3. `POST /bookings` → verifica lock → cria booking no Postgres → libera lock → broadcast `SEAT_BOOKED`
