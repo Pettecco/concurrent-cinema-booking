@@ -10,7 +10,7 @@ export class PostgresShowtimeRepository implements IShowtimeRepository {
       .where({ room_id: roomId })
       .orderBy('start_time');
 
-    return showtimes.map(row => this.toDomain(row));
+    return showtimes.map((row) => this.toDomain(row));
   }
 
   async findById(id: string): Promise<Showtime | null> {
