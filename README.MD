@@ -398,11 +398,11 @@ pnpm cleanup  # limpa banco e Redis
 - Usuário 2 pode travar `A1` às **17:00** (mesmo assento, horário diferente)
 - Usuário 3 **não consegue** travar `A1` às **14:00** (já travado pelo Usuário 1)
 
-## Envio de E-mail
+## Processamento Assíncrono com BullMQ
 
-O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usando **BullMQ** + **Mailhog**.
+O sistema utiliza **BullMQ** para processamento assíncrono de duas funcionalidades principais: **envio de e-mails** e **auditoria de eventos**.
 
-### Fluxo
+### Arquitetura
 
 ```
 ┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
@@ -417,13 +417,22 @@ O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usa
                                                    └─────────────┘ └─────────────┘
 ```
 
-### Serviços
+### Serviços Utilizados
 
-- **BullMQ**: Gerencia fila de jobs no Redis
-- **Nodemailer**: Envia e-mails via SMTP
-- **Mailhog**: Servidor SMTP fake para desenvolvimento
+| Serviço     | Tecnologia | Finalidade                              |
+| ----------- | ---------- | --------------------------------------- |
+| **BullMQ**  | Redis      | Gerencia filas de jobs em background    |
+| **Nodemailer** | SMTP    | Envia e-mails de confirmação            |
+| **Mailhog** | SMTP fake  | Captura e-mails em desenvolvimento      |
+| **PostgreSQL** | Banco   | Persiste eventos de auditoria           |
 
-### Acessar e-mails
+---
+
+## 📧 Envio de E-mail
+
+E-mails de confirmação de reserva são enviados de forma assíncrona para não bloquear a resposta ao usuário.
+
+### Acessar e-mails (Mailhog)
 
 ```bash
 # Subir Mailhog
@@ -441,24 +450,11 @@ SMTP_PORT=1025
 EMAIL_FROM=Cinema <noreply@cinema.com>
 ```
 
-## Auditoria de Eventos
+---
 
-O sistema registra todos os eventos importantes de forma **assíncrona** usando **BullMQ** + **PostgreSQL**.
+## 🔍 Auditoria de Eventos
 
-### Fluxo
-
-```
-┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
-│  Client  │────▶│  Controller │────▶│ Service │────▶│  Queue  │────▶│  Worker  │
-└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘     └────┬─────┘
-                                                          │              │
-                                                          │ async        │ async
-                                                          ▼              ▼
-                                                   ┌─────────────┐ ┌─────────────┐
-                                                   │  Mailhog    │ │ PostgreSQL  │
-                                                   │  (SMTP)     │ │ audit_logs  │
-                                                   └─────────────┘ └─────────────┘
-```
+Todos os eventos importantes do sistema são registrados para rastreabilidade e debugging.
 
 ### Eventos Auditados
 
@@ -469,11 +465,6 @@ O sistema registra todos os eventos importantes de forma **assíncrona** usando 
 | `LOCK_EXPIRED`        | Lock expirou (TTL)              | `lock:{roomId}:{showtimeId}:{seatId}`     |
 | `BOOKING_CREATED`     | Reserva criada                  | `bookingId`                               |
 | `BOOKING_FAILED`      | Falha na reserva                | `userId`                                  |
-
-### Serviços
-
-- **BullMQ**: Gerencia fila de jobs no Redis
-- **PostgreSQL**: Persiste eventos de auditoria na tabela `audit_logs`
 
 ### Tabela `audit_logs`
 
@@ -487,7 +478,7 @@ O sistema registra todos os eventos importantes de forma **assíncrona** usando 
 | `occurred_at`| TIMESTAMPTZ  | Quando o evento ocorreu            |
 | `created_at` | TIMESTAMPTZ  | Quando foi registrado no banco     |
 
-### Consultar Auditoria
+### Exemplos de Queries
 
 ```sql
 -- Todos os eventos de um lock específico
