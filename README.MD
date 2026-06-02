@@ -405,16 +405,16 @@ O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usa
 ### Fluxo
 
 ```
-┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
-│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
-└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
-                                                          │
-                                                          │ async
-                                                          ▼
-                                                   ┌─────────────┐
-                                                   │  Mailhog    │
-                                                   │  (SMTP)     │
-                                                   └─────────────┘
+┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
+│  Client  │────▶│  Controller │────▶│ Service │────▶│  Queue  │────▶│  Worker  │
+└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘     └────┬─────┘
+                                                          │              │
+                                                          │ async        │ async
+                                                          ▼              ▼
+                                                   ┌─────────────┐ ┌─────────────┐
+                                                   │  Mailhog    │ │ PostgreSQL  │
+                                                   │  (SMTP)     │ │ audit_logs  │
+                                                   └─────────────┘ └─────────────┘
 ```
 
 ### Serviços
@@ -448,16 +448,16 @@ O sistema registra todos os eventos importantes de forma **assíncrona** usando 
 ### Fluxo
 
 ```
-┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
-│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
-└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
-                                                          │
-                                                          │ async
-                                                          ▼
-                                                   ┌─────────────┐
-                                                   │ PostgreSQL  │
-                                                   │ audit_logs  │
-                                                   └─────────────┘
+┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
+│  Client  │────▶│  Controller │────▶│ Service │────▶│  Queue  │────▶│  Worker  │
+└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘     └────┬─────┘
+                                                          │              │
+                                                          │ async        │ async
+                                                          ▼              ▼
+                                                   ┌─────────────┐ ┌─────────────┐
+                                                   │  Mailhog    │ │ PostgreSQL  │
+                                                   │  (SMTP)     │ │ audit_logs  │
+                                                   └─────────────┘ └─────────────┘
 ```
 
 ### Eventos Auditados
