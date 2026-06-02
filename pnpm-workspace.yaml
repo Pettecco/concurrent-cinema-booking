@@ -1,4 +1,9 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
 allowBuilds:
-  '@scarf/scarf': false
-  esbuild: false
-  msgpackr-extract: false
+  '@scarf/scarf': set this to true or false
+  esbuild: set this to true or false
+  msgpackr-extract: set this to true or false
+  sharp: false
+  unrs-resolver: false
