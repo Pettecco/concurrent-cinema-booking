@@ -287,13 +287,7 @@ Todas as instâncias respeitam o mesmo lock.
 
 ## Documentação da API (Swagger UI)
 
-A API é documentada com **Swagger UI** e está disponível em:
-
-```
-http://localhost:3000/docs
-```
-
-![Swagger UI Documentation](src/infra/http/swagger.png)
+A API é documentada com **Swagger** e está disponível na rota: `/docs`
 
 ## Tecnologias
 
@@ -312,8 +306,6 @@ http://localhost:3000/docs
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="16"/> Docker             | -      | Containers         |
 
 ## Setup
-
-### Setup
 
 ```bash
 git clone <repo-url>
@@ -408,6 +400,21 @@ pnpm cleanup  # limpa banco e Redis
 
 O sistema envia e-mails de confirmação de reserva de forma **assíncrona** usando **BullMQ** + **Mailhog**.
 
+### Fluxo
+
+```
+┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
+│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
+└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
+                                                          │
+                                                          │ async
+                                                          ▼
+                                                   ┌─────────────┐
+                                                   │  Mailhog    │
+                                                   │  (SMTP)     │
+                                                   └─────────────┘
+```
+
 ### Serviços
 
 - **BullMQ**: Gerencia fila de jobs no Redis
@@ -430,4 +437,69 @@ http://localhost:8025
 SMTP_HOST=localhost
 SMTP_PORT=1025
 EMAIL_FROM=Cinema <noreply@cinema.com>
+```
+
+## Auditoria de Eventos
+
+O sistema registra todos os eventos importantes de forma **assíncrona** usando **BullMQ** + **PostgreSQL**.
+
+### Fluxo
+
+```
+┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌──────────┐
+│  Client  │────▶│  Controller │────▶│  Queue  │────▶│  Worker  │
+└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘
+                                                          │
+                                                          │ async
+                                                          ▼
+                                                   ┌─────────────┐
+                                                   │ PostgreSQL  │
+                                                   │ audit_logs  │
+                                                   └─────────────┘
+```
+
+### Eventos Auditados
+
+| Evento                | Quando                          | Aggregate ID                              |
+| --------------------- | ------------------------------- | ----------------------------------------- |
+| `LOCK_ACQUIRED`       | Lock adquirido com sucesso      | `lock:{roomId}:{showtimeId}:{seatId}`     |
+| `LOCK_RELEASED`       | Lock liberado manualmente       | `lock:{roomId}:{showtimeId}:{seatId}`     |
+| `LOCK_EXPIRED`        | Lock expirou (TTL)              | `lock:{roomId}:{showtimeId}:{seatId}`     |
+| `BOOKING_CREATED`     | Reserva criada                  | `bookingId`                               |
+| `BOOKING_FAILED`      | Falha na reserva                | `userId`                                  |
+
+### Serviços
+
+- **BullMQ**: Gerencia fila de jobs no Redis
+- **PostgreSQL**: Persiste eventos de auditoria na tabela `audit_logs`
+
+### Tabela `audit_logs`
+
+| Coluna       | Tipo         | Descrição                          |
+| ------------ | ------------ | ---------------------------------- |
+| `id`         | UUID         | ID único do evento                 |
+| `event_type` | VARCHAR      | Tipo do evento (ex: LOCK_ACQUIRED) |
+| `aggregate_id` | UUID       | ID da entidade relacionada         |
+| `user_id`    | VARCHAR      | Usuário que originou o evento      |
+| `metadata`   | JSONB        | Dados contextuais do evento        |
+| `occurred_at`| TIMESTAMPTZ  | Quando o evento ocorreu            |
+| `created_at` | TIMESTAMPTZ  | Quando foi registrado no banco     |
+
+### Consultar Auditoria
+
+```sql
+-- Todos os eventos de um lock específico
+SELECT * FROM audit_logs
+WHERE aggregate_id = 'lock:room-1:showtime-14h:A1'
+ORDER BY occurred_at DESC;
+
+-- Todos os eventos de um usuário
+SELECT * FROM audit_logs
+WHERE user_id = 'user-123'
+ORDER BY occurred_at DESC;
+
+-- Eventos de lock expirado nas últimas 24 horas
+SELECT * FROM audit_logs
+WHERE event_type = 'LOCK_EXPIRED'
+  AND occurred_at > NOW() - INTERVAL '24 hours';
 ```
