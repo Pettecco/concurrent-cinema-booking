@@ -241,6 +241,8 @@ Todas as instâncias respeitam o mesmo lock.
 
 ![Database Schema](src/infra/postgres/db.png)
 
+> **Obs:** A imagem não inclui a tabela `audit_logs` (adicionada posteriormente para auditoria de eventos).
+
 ### Fluxo de Lock com Redis
 
 ```
