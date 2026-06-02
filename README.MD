@@ -405,30 +405,42 @@ O sistema utiliza **BullMQ** para processamento assíncrono de duas funcionalida
 ### Arquitetura
 
 ```
-┌──────────┐     ┌─────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
-│  Client  │────▶│  Controller │────▶│ Service │────▶│  Queue  │────▶│  Worker  │
-└──────────┘     └─────────────┘     └─────────┘     └────┬─────┘     └────┬─────┘
-                                                          │              │
-                                                          │ async        │ async
-                                                          ▼              ▼
-                                                   ┌─────────────┐ ┌─────────────┐
-                                                   │  Mailhog    │ │ PostgreSQL  │
-                                                   │  (SMTP)     │ │ audit_logs  │
-                                                   └─────────────┘ └─────────────┘
+┌──────────┐     ┌─────────────┐     ┌─────────────┐
+│  Client  │────▶│  Controller │────▶│   Service   │
+└──────────┘     └─────────────┘     └──────┬──────┘
+                                            │ BullMQ
+                    ┌───────────────────────┼───────────────────────┐
+                    │                       │                       │
+                    │    ┌─────────────┐    │    ┌─────────────┐    │
+                    │    │ email Queue │    │    │ audit Queue │    │
+                    │    └──────┬──────┘    │    └──────┬──────┘    │
+                    │           │           │           │           │
+                    │           ▼           │           ▼           │
+                    │    ┌─────────────┐    │    ┌─────────────┐    │
+                    │    │ Email Worker│    │    │ Audit Worker│    │
+                    │    └──────┬──────┘    │    └──────┬──────┘    │
+                    │           │           │           │           │
+                    └───────────┼───────────┴───────────┼───────────┘
+                                │                       │
+                    ┌───────────▼───────────┐  ┌────────▼────────┐
+                    │      Mailhog          │  │   PostgreSQL    │
+                    │      (SMTP)           │  │   audit_logs    │
+                    └───────────────────────┘  └─────────────────┘
+
 ```
 
 ### Serviços Utilizados
 
-| Serviço     | Tecnologia | Finalidade                              |
-| ----------- | ---------- | --------------------------------------- |
-| **BullMQ**  | Redis      | Gerencia filas de jobs em background    |
-| **Nodemailer** | SMTP    | Envia e-mails de confirmação            |
-| **Mailhog** | SMTP fake  | Captura e-mails em desenvolvimento      |
-| **PostgreSQL** | Banco   | Persiste eventos de auditoria           |
+| Serviço        | Tecnologia | Finalidade                           |
+| -------------- | ---------- | ------------------------------------ |
+| **BullMQ**     | Redis      | Gerencia filas de jobs em background |
+| **Nodemailer** | SMTP       | Envia e-mails de confirmação         |
+| **Mailhog**    | SMTP fake  | Captura e-mails em desenvolvimento   |
+| **PostgreSQL** | Banco      | Persiste eventos de auditoria        |
 
 ---
 
-## 📧 Envio de E-mail
+## Envio de E-mail
 
 E-mails de confirmação de reserva são enviados de forma assíncrona para não bloquear a resposta ao usuário.
 
@@ -452,31 +464,31 @@ EMAIL_FROM=Cinema <noreply@cinema.com>
 
 ---
 
-## 🔍 Auditoria de Eventos
+## Auditoria de Eventos
 
 Todos os eventos importantes do sistema são registrados para rastreabilidade e debugging.
 
 ### Eventos Auditados
 
-| Evento                | Quando                          | Aggregate ID                              |
-| --------------------- | ------------------------------- | ----------------------------------------- |
-| `LOCK_ACQUIRED`       | Lock adquirido com sucesso      | `lock:{roomId}:{showtimeId}:{seatId}`     |
-| `LOCK_RELEASED`       | Lock liberado manualmente       | `lock:{roomId}:{showtimeId}:{seatId}`     |
-| `LOCK_EXPIRED`        | Lock expirou (TTL)              | `lock:{roomId}:{showtimeId}:{seatId}`     |
-| `BOOKING_CREATED`     | Reserva criada                  | `bookingId`                               |
-| `BOOKING_FAILED`      | Falha na reserva                | `userId`                                  |
+| Evento            | Quando                     | Aggregate ID                          |
+| ----------------- | -------------------------- | ------------------------------------- |
+| `LOCK_ACQUIRED`   | Lock adquirido com sucesso | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `LOCK_RELEASED`   | Lock liberado manualmente  | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `LOCK_EXPIRED`    | Lock expirou (TTL)         | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `BOOKING_CREATED` | Reserva criada             | `bookingId`                           |
+| `BOOKING_FAILED`  | Falha na reserva           | `userId`                              |
 
 ### Tabela `audit_logs`
 
-| Coluna       | Tipo         | Descrição                          |
-| ------------ | ------------ | ---------------------------------- |
-| `id`         | UUID         | ID único do evento                 |
-| `event_type` | VARCHAR      | Tipo do evento (ex: LOCK_ACQUIRED) |
-| `aggregate_id` | UUID       | ID da entidade relacionada         |
-| `user_id`    | VARCHAR      | Usuário que originou o evento      |
-| `metadata`   | JSONB        | Dados contextuais do evento        |
-| `occurred_at`| TIMESTAMPTZ  | Quando o evento ocorreu            |
-| `created_at` | TIMESTAMPTZ  | Quando foi registrado no banco     |
+| Coluna         | Tipo        | Descrição                          |
+| -------------- | ----------- | ---------------------------------- |
+| `id`           | UUID        | ID único do evento                 |
+| `event_type`   | VARCHAR     | Tipo do evento (ex: LOCK_ACQUIRED) |
+| `aggregate_id` | UUID        | ID da entidade relacionada         |
+| `user_id`      | VARCHAR     | Usuário que originou o evento      |
+| `metadata`     | JSONB       | Dados contextuais do evento        |
+| `occurred_at`  | TIMESTAMPTZ | Quando o evento ocorreu            |
+| `created_at`   | TIMESTAMPTZ | Quando foi registrado no banco     |
 
 ### Exemplos de Queries
 
