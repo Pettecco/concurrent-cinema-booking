@@ -24,6 +24,9 @@ import { PostgresMovieRepository } from './movie/repositories/postgres-movie-rep
 import { RoomController } from './room/presentation/controllers/room-controller.js';
 import { roomRoutes } from './room/presentation/routes/room-routes.js';
 import { PostgresRoomRepository } from './room/repositories/postgres-room-repository.js';
+import { ShowtimeController } from './showtime/presentation/controllers/showtime-controller.js';
+import { showtimeRoutes } from './showtime/presentation/routes/showtime-routes.js';
+import { PostgresShowtimeRepository } from './showtime/repositories/postgres-showtime-repository.js';
 import { EmailService } from './application/services/email-service.js';
 import { emailWorker } from './infra/queues/email-queue.js';
 import { auditWorker } from './infra/queues/audit-queue.js';
@@ -35,7 +38,11 @@ const app = express();
 
 const bookingRepository = new PostgresBookingRepository(db);
 const lockService = new RedisLockService(redis);
-const bookingService = new BookingService(bookingRepository, lockService, logger);
+const bookingService = new BookingService(
+  bookingRepository,
+  lockService,
+  logger
+);
 const emailService = new EmailService();
 const auditService = new AuditService();
 const healthController = new HealthController(db, redis);
@@ -43,6 +50,8 @@ const movieRepository = new PostgresMovieRepository(db);
 const movieController = new MovieController(movieRepository);
 const roomRepository = new PostgresRoomRepository(db);
 const roomController = new RoomController(roomRepository);
+const showtimeRepository = new PostgresShowtimeRepository(db);
+const showtimeController = new ShowtimeController(showtimeRepository);
 
 const httpServer = createServer(app);
 
@@ -65,6 +74,7 @@ app.use('/bookings', bookingRoutes(bookingController));
 app.use('/locks', lockRoutes(lockController));
 app.use('/movies', movieRoutes(movieController));
 app.use('/rooms', roomRoutes(roomController));
+app.use('/showtimes', showtimeRoutes(showtimeController));
 
 logger.info('Email worker initialized');
 

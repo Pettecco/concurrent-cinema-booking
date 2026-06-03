@@ -3,6 +3,7 @@ import { bookingDocs } from '../../booking/presentation/docs/openapi.js';
 import { lockDocs } from '../../booking/presentation/docs/lock-openapi.js';
 import { movieDocs } from '../../movie/presentation/docs/openapi.js';
 import { roomDocs } from '../../room/presentation/docs/openapi.js';
+import { showtimeDocs } from '../../showtime/presentation/docs/openapi.js';
 import { healthDocs } from './docs/openapi.js';
 
 const paths: OpenAPIV3.PathsObject = {
@@ -10,6 +11,7 @@ const paths: OpenAPIV3.PathsObject = {
   ...lockDocs,
   ...movieDocs,
   ...roomDocs,
+  ...showtimeDocs,
   ...healthDocs,
 };
 
@@ -101,6 +103,16 @@ export const swaggerSpec: OpenAPIV3.Document = {
           rating: { type: 'string' },
           banner_url: { type: 'string', format: 'uri' },
         },
+      },
+      Showtime: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          roomId: { type: 'string', format: 'uuid' },
+          startTime: { type: 'string' },
+          endTime: { type: 'string' },
+        },
+        required: ['id', 'roomId', 'startTime', 'endTime'],
       },
     },
   },
