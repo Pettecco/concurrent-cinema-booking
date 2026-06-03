@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Urbanist } from "next/font/google";
 import "./globals.css";
+import { UserIdDisplay } from "@/components/layout/user-id-display";
 
 const urbanist = Urbanist({
   variable: "--font-urbanist",
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br" className={`${urbanist.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <UserIdDisplay />
+        {children}
+      </body>
     </html>
   );
 }
