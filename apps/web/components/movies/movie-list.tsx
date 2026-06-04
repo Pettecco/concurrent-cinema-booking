@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { useMovies } from "@/hooks/use-movies";
 import { MovieCard } from "./movie-card";
 import { MovieSkeleton } from "./movie-skeleton";
 import { ShowtimeDialog } from "./showtime-dialog";
+import { useFetch } from "@/hooks/use-fetch";
+
+interface Movie {
+  id: string;
+  title: string;
+  description?: string;
+  duration: number;
+  releaseDate: string;
+  genre?: string;
+  rating?: string;
+  bannerUrl?: string;
+}
 
 export const MovieList = () => {
-  const { movies, loading, error } = useMovies();
+  const { data: movies, loading, error } = useFetch<Movie[]>("movies");
   const [selectedMovie, setSelectedMovie] = useState<{
     id: string;
     title: string;
@@ -16,7 +27,7 @@ export const MovieList = () => {
   if (error) {
     return (
       <div className="flex h-full items-center justify-center text-imperial-red">
-        <p>Failed to load movies: {error}</p>
+        <p>Failed to load movies: {error.message}</p>
       </div>
     );
   }
@@ -26,7 +37,7 @@ export const MovieList = () => {
       <div className="mx-auto grid max-w-350 grid-cols-1 gap-12 px-6 sm:grid-cols-2 xl:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <MovieSkeleton key={i} />)
-          : movies.map((movie, index) => (
+          : movies?.map((movie, index) => (
               <div
                 key={movie.id}
                 className="animate-in fade-in slide-in-from-bottom-4 duration-700"

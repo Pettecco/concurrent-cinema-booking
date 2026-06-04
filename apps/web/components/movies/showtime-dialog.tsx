@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useFetch } from "@/hooks/use-fetch";
 
 interface Showtime {
   id: string;
@@ -15,8 +15,16 @@ interface Showtime {
   endTime: string;
 }
 
-interface ShowtimeDialogProps {
+interface Room {
+  id: string;
+  name: string;
   movieId: string;
+  totalSeats: number;
+  layout?: string;
+}
+
+interface ShowtimeDialogProps {
+  movieId: string | null;
   movieTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,40 +38,17 @@ export function ShowtimeDialog({
   onOpenChange,
   onSelectShowtime,
 }: ShowtimeDialogProps) {
-  const [showtimes, setShowtimes] = useState<Showtime[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: room, loading: roomLoading } = useFetch<Room>(
+    open && movieId ? `rooms/movie/${movieId}` : null,
+  );
 
-  useEffect(() => {
-    if (!open || !movieId) return;
+  const {
+    data: showtimes,
+    loading: showtimesLoading,
+    error: showtimesError,
+  } = useFetch<Showtime[]>(room?.id ? `showtimes/room/${room.id}` : null);
 
-    async function fetchShowtimes() {
-      setLoading(true);
-      setError(null);
-      try {
-        const roomRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/rooms/movie/${movieId}`,
-        );
-        if (!roomRes.ok) throw new Error("Sala não encontrada");
-
-        const room = await roomRes.json();
-
-        const showtimesRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/showtimes/room/${room.id}`,
-        );
-        if (!showtimesRes.ok) throw new Error("Failed to fetch showtimes");
-
-        const data = await showtimesRes.json();
-        setShowtimes(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao carregar");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchShowtimes();
-  }, [open, movieId]);
+  const loading = roomLoading || showtimesLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,19 +65,19 @@ export function ShowtimeDialog({
           </div>
         )}
 
-        {error && (
+        {showtimesError && (
           <p className="py-6 text-center text-xl font-semibold text-imperial-red">
-            {error}
+            {showtimesError?.message}
           </p>
         )}
 
-        {!loading && !error && showtimes.length === 0 && (
+        {!loading && !showtimesError && showtimes?.length === 0 && (
           <p className="py-6 text-center text-xl font-semibold text-gray">
             Nenhum horário disponível
           </p>
         )}
 
-        {!loading && !error && showtimes.length > 0 && (
+        {!loading && !showtimesError && showtimes && showtimes.length > 0 && (
           <div className="flex flex-col gap-4 py-4">
             {showtimes.map((st) => (
               <button
