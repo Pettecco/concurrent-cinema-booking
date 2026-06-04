@@ -48,7 +48,11 @@ export const MovieCard = ({
       <div className="absolute inset-x-0 bottom-0 flex justify-between bg-linear-to-t from-black/90 to-black/60 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
         <span className="text-sm font-medium text-white">{duration} min</span>
         <span className="text-sm font-medium text-white">{genre}</span>
-        <span className="rounded bg-imperial-red px-3 py-1 text-sm font-semibold text-white">
+        <span
+          className={`rounded px-3 py-1 text-sm font-semibold text-white ${
+            rating === "14" ? "bg-[#FF8C00]" : "bg-imperial-red"
+          }`}
+        >
           {rating}
         </span>
       </div>

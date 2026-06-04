@@ -11,7 +11,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: '550e8400-e29b-41d4-a716-446655440001',
       title: "One Flew Over the Cuckoo's Nest",
       description:
-        'A criminal pleads insanity and is sent to a mental institution, where he rebels against the oppressive nurse and rallies up the scared patients.',
+        'Um criminoso finge insanidade e é enviado para uma instituição psiquiátrica, onde se rebela contra a enfermeira opressora e inspira os pacientes amedrontados a enfrentarem o sistema.',
       duration: 133,
       release_date: '1975-11-19',
       genre: 'Drama',
@@ -23,7 +23,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: '550e8400-e29b-41d4-a716-446655440002',
       title: 'Moonlight',
       description:
-        'A young African-American man grapples with his identity and sexuality while experiencing the everyday struggles of childhood, adolescence, and burgeoning adulthood.',
+        'Um jovem afro-americano lida com questões de identidade e sexualidade enquanto enfrenta os desafios da infância, adolescência e início da vida adulta.',
       duration: 111,
       release_date: '2016-10-21',
       genre: 'Drama',
@@ -35,7 +35,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: '550e8400-e29b-41d4-a716-446655440003',
       title: 'Aftersun',
       description:
-        'Sophie reflects on the shared joy and private melancholy of a holiday she took with her father twenty years earlier.',
+        'Sophie relembra os momentos de alegria compartilhada e a melancolia silenciosa de uma viagem de férias que fez com seu pai vinte anos antes.',
       duration: 102,
       release_date: '2022-10-21',
       genre: 'Drama',

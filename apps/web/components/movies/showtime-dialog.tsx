@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -23,21 +24,29 @@ interface Room {
   layout?: string;
 }
 
+interface Movie {
+  id: string;
+  title: string;
+  description?: string;
+}
+
 interface ShowtimeDialogProps {
   movieId: string | null;
   movieTitle: string;
+  movieDescription?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectShowtime?: (showtime: Showtime, roomId: string) => void;
 }
 
 export function ShowtimeDialog({
   movieId,
   movieTitle,
+  movieDescription,
   open,
   onOpenChange,
-  onSelectShowtime,
 }: ShowtimeDialogProps) {
+  const router = useRouter();
+
   const { data: room, loading: roomLoading } = useFetch<Room>(
     open && movieId ? `rooms/movie/${movieId}` : null,
   );
@@ -50,6 +59,12 @@ export function ShowtimeDialog({
 
   const loading = roomLoading || showtimesLoading;
 
+  const handleSelectShowtime = (showtime: Showtime) => {
+    if (!movieId) return;
+    onOpenChange(false);
+    router.push(`/movies/${movieId}/showtimes/${showtime.id}`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background-2 text-white">
@@ -57,6 +72,11 @@ export function ShowtimeDialog({
           <DialogTitle className="text-center text-3xl font-bold text-imperial-red">
             {movieTitle}
           </DialogTitle>
+          {movieDescription && (
+            <p className="text-center text-lg text-gray leading-relaxed">
+              {movieDescription}
+            </p>
+          )}
         </DialogHeader>
 
         {loading && (
@@ -82,7 +102,7 @@ export function ShowtimeDialog({
             {showtimes.map((st) => (
               <button
                 key={st.id}
-                onClick={() => onSelectShowtime?.(st, st.roomId)}
+                onClick={() => handleSelectShowtime(st)}
                 className="rounded-xl border border-background-3 bg-background-3 px-8 py-6 text-center text-2xl font-bold text-white transition-all hover:border-imperial-red hover:bg-imperial-red/10"
               >
                 <span>{st.startTime}</span>

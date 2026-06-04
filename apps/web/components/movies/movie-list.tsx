@@ -22,6 +22,7 @@ export const MovieList = () => {
   const [selectedMovie, setSelectedMovie] = useState<{
     id: string;
     title: string;
+    description?: string;
   } | null>(null);
 
   if (error) {
@@ -50,7 +51,11 @@ export const MovieList = () => {
                   genre={movie.genre}
                   rating={movie.rating}
                   onClick={() =>
-                    setSelectedMovie({ id: movie.id, title: movie.title })
+                    setSelectedMovie({
+                      id: movie.id,
+                      title: movie.title,
+                      description: movie.description,
+                    })
                   }
                 />
               </div>
@@ -60,6 +65,7 @@ export const MovieList = () => {
       <ShowtimeDialog
         movieId={selectedMovie?.id ?? null}
         movieTitle={selectedMovie?.title ?? ""}
+        movieDescription={selectedMovie?.description}
         open={!!selectedMovie}
         onOpenChange={(open) => {
           if (!open) setSelectedMovie(null);

@@ -1,28 +1,27 @@
 import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
-
   await knex('rooms').insert([
     {
       id: '660e8400-e29b-41d4-a716-446655440001',
-      name: "Sala 1 - One Flew Over the Cuckoo's Nest",
+      name: 'Sala 1',
       movie_id: '550e8400-e29b-41d4-a716-446655440001',
+      total_seats: 40,
+      layout: '5x8',
+    },
+    {
+      id: '660e8400-e29b-41d4-a716-446655440002',
+      name: 'Sala 2',
+      movie_id: '550e8400-e29b-41d4-a716-446655440002',
       total_seats: 25,
       layout: '5x5',
     },
     {
-      id: '660e8400-e29b-41d4-a716-446655440002',
-      name: 'Sala 2 - Moonlight',
-      movie_id: '550e8400-e29b-41d4-a716-446655440002',
-      total_seats: 20,
-      layout: '4x5',
-    },
-    {
       id: '660e8400-e29b-41d4-a716-446655440003',
-      name: 'Sala 3 - Aftersun',
+      name: 'Sala 3',
       movie_id: '550e8400-e29b-41d4-a716-446655440003',
-      total_seats: 15,
-      layout: '3x5',
+      total_seats: 35,
+      layout: '7x5',
     },
   ]);
 
