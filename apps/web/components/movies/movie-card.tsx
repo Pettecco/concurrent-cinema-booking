@@ -27,7 +27,7 @@ export const MovieCard = ({
       onClick={onClick}
       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-lg bg-background-2 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-imperial-red/20"
     >
-      <div className="relative aspect-2/3 w-full min-h-140 overflow-hidden bg-background-3">
+      <div className="aspect-[2/3] w-full overflow-hidden bg-background-3">
         {bannerUrl && (
           <Image
             src={bannerUrl}

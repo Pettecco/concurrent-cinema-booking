@@ -35,7 +35,7 @@ export const MovieList = () => {
 
   return (
     <>
-      <div className="mx-auto grid max-w-350 grid-cols-1 gap-12 px-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <MovieSkeleton key={i} />)
           : movies?.map((movie, index) => (

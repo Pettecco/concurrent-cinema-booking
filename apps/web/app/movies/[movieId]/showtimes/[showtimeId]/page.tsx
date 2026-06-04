@@ -5,7 +5,9 @@ import { useParams } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLock } from "@/hooks/use-lock";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useUserId } from "@/hooks/use-user-id";
 import { SeatGrid } from "@/components/seats/seat-grid";
+import { EmailDialog } from "@/components/booking/email-dialog";
 import type { Booking, Room, Showtime, Movie } from "@/types/cinema";
 
 function useSeatSelection(movieId: string | null, showtimeId: string | null) {
@@ -109,18 +111,18 @@ function useSeatSelection(movieId: string | null, showtimeId: string | null) {
 function LoadingSpinner() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="h-16 w-16 animate-spin rounded-full border-4 border-imperial-red border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-imperial-red border-t-transparent" />
     </div>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background">
-      <p className="text-2xl font-bold text-imperial-red">{message}</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+      <p className="text-lg font-bold text-imperial-red">{message}</p>
       <button
         onClick={() => window.history.back()}
-        className="cursor-pointer rounded-xl bg-background-3 px-8 py-4 text-xl font-bold text-white transition-all hover:bg-imperial-red"
+        className="cursor-pointer rounded-lg bg-background-3 px-6 py-3 text-base font-bold text-white transition-all hover:bg-imperial-red"
       >
         Voltar
       </button>
@@ -131,6 +133,9 @@ function ErrorState({ message }: { message: string }) {
 export default function SeatSelectionPage() {
   const params = useParams<{ movieId: string; showtimeId: string }>();
   const [confirming, setConfirming] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const userId = useUserId();
 
   const movieId = Array.isArray(params.movieId)
     ? params.movieId[0]
@@ -164,9 +169,10 @@ export default function SeatSelectionPage() {
     }
   };
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmBooking = async (email: string) => {
     if (!showtime?.roomId || !showtimeId) return;
     setConfirming(true);
+    setEmailDialogOpen(false);
 
     for (const seatId of lockedSeats) {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
@@ -176,8 +182,8 @@ export default function SeatSelectionPage() {
           roomId: showtime.roomId,
           showtimeId,
           seatId,
-          userId: "user-id-here",
-          email: "user@email.com",
+          userId,
+          email,
         }),
       });
     }
@@ -194,13 +200,13 @@ export default function SeatSelectionPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-8 py-12">
-      <div className="-mt-12 mb-12 text-center">
-        <h1 className="text-8xl font-bold text-imperial-red">{movie.title}</h1>
-        <p className="mt-6 text-4xl text-gray">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold text-imperial-red">{movie.title}</h1>
+        <p className="mt-2 text-xl text-gray">
           {showtime.startTime} — {showtime.endTime}
         </p>
-        <p className="mt-3 text-3xl text-gray">{room.name}</p>
+        <p className="mt-1 text-lg text-gray">{room.name}</p>
       </div>
 
       <SeatGrid
@@ -212,35 +218,42 @@ export default function SeatSelectionPage() {
       />
 
       {lockedSeats.length > 0 && (
-        <div className="mt-16 flex flex-col items-center gap-8">
-          <div className="flex items-center gap-6">
-            <p className="text-3xl font-bold text-white">
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-4">
+            <p className="text-lg font-bold text-white">
               Selecionado: {lockedSeats.join(", ")}
             </p>
-            <span className="rounded-xl bg-carrow-orange/20 px-6 py-3 text-2xl font-bold text-carrow-orange">
+            <span className="rounded-lg bg-carrow-orange/20 px-4 py-2 text-lg font-bold text-carrow-orange">
               {getRemainingTime()}
             </span>
             <button
               onClick={unlockAll}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-background-3 text-xl font-bold text-gray transition-all hover:bg-imperial-red hover:text-white"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-background-3 text-base font-bold text-gray transition-all hover:bg-imperial-red hover:text-white"
             >
               ✕
             </button>
           </div>
-          <p className="text-xl text-gray text-center max-w-xl">
+          <p className="text-base text-gray text-center max-w-md">
             Seus assentos estão reservados por{" "}
             <span className="text-carrow-orange font-semibold">5 minutos</span>.
             Após esse tempo, a reserva será liberada automaticamente.
           </p>
           <button
-            onClick={handleConfirmBooking}
+            onClick={() => setEmailDialogOpen(true)}
             disabled={confirming}
-            className="cursor-pointer rounded-xl bg-imperial-red px-16 py-8 text-3xl font-bold text-white transition-all hover:bg-imperial-red/80 disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-lg bg-imperial-red px-8 py-4 text-lg font-bold text-white transition-all hover:bg-imperial-red/80 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {confirming ? "Reservando..." : "Confirmar Reserva"}
+            {confirming ? "Reservando..." : "Confirmar reserva"}
           </button>
         </div>
       )}
+
+      <EmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        seats={lockedSeats}
+        onConfirm={handleConfirmBooking}
+      />
     </div>
   );
 }
