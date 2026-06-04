@@ -30,4 +30,23 @@ export class RedisLockService implements ILockService {
     const owner = await this.redis.get(key);
     return owner === userId;
   }
+
+  async listActive(prefix: string): Promise<{ key: string; userId: string; ttl: number }[]> {
+    const keys = await this.redis.keys(`${prefix}*`);
+    if (!keys.length) return [];
+
+    const results = await this.redis.pipeline(
+      keys.map(key => ['get', key]),
+    ).exec();
+
+    const ttls = await this.redis.pipeline(
+      keys.map(key => ['pttl', key]),
+    ).exec();
+
+    return keys.map((key, i) => ({
+      key,
+      userId: results?.[i]?.[1] as string,
+      ttl: ttls?.[i]?.[1] as number,
+    }));
+  }
 }

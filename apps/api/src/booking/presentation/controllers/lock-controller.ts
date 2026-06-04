@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { LockNotOwnedError } from '../../domain/errors.js';
 import type { ILockService } from '../../domain/lock-service.js';
-import { manipulateLockSchema } from '../schemas/lock.schema.js';
+import { manipulateLockSchema, listLocksSchema } from '../schemas/lock.schema.js';
 import type { Broadcast } from '../../../infra/websocket/broadcast.js';
 import { AuditService } from '../../../audit/application/audit-service.js';
 
@@ -116,5 +116,24 @@ export class LockController {
       }
       throw error;
     }
+  }
+
+  async listActive(req: Request, res: Response) {
+    const input = listLocksSchema.safeParse(req.query);
+    if (!input.success) {
+      return res.status(400).json({ errors: input.error.issues });
+    }
+
+    const { roomId, showtimeId } = input.data;
+    const prefix = `lock:${roomId}:${showtimeId}:`;
+
+    const locks = await this.lockService.listActive(prefix);
+
+    const formatted = locks.map(lock => {
+      const seatId = lock.key.replace(prefix, '');
+      return { seatId, userId: lock.userId, ttl: lock.ttl };
+    });
+
+    return res.status(200).json(formatted);
   }
 }

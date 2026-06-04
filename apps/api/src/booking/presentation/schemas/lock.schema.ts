@@ -7,4 +7,9 @@ export const manipulateLockSchema = z.object({
   userId: z.uuid().min(1),
 });
 
+export const listLocksSchema = z.object({
+  roomId: z.uuid(),
+  showtimeId: z.uuid(),
+});
+
 export type ManipulateLockInput = z.infer<typeof manipulateLockSchema>;

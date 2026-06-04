@@ -32,6 +32,23 @@ export class MemoryLockService implements ILockService {
     return existing.userId === userId;
   }
 
+  async listActive(prefix: string): Promise<{ key: string; userId: string; ttl: number }[]> {
+    const now = Date.now();
+    const results: { key: string; userId: string; ttl: number }[] = [];
+
+    for (const [key, value] of this.store.entries()) {
+      if (key.startsWith(prefix) && value.expiresAt > now) {
+        results.push({
+          key,
+          userId: value.userId,
+          ttl: value.expiresAt - now,
+        });
+      }
+    }
+
+    return results;
+  }
+
   async simulateDelay(ms: number): Promise<void> {
     await sleep(ms);
   }

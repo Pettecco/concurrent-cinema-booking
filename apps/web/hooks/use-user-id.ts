@@ -7,7 +7,6 @@ export function useUserId() {
     const stored = localStorage.getItem("userId");
 
     if (stored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserId(stored);
     } else {
       const newId = crypto.randomUUID();

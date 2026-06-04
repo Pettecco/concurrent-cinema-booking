@@ -23,4 +23,11 @@ export interface ILockService {
    * @returns true if the user owns the lock, false otherwise
    */
   verify(key: string, userId: string): Promise<boolean>;
+
+  /**
+   * Lists all active locks matching a prefix.
+   * @param prefix - The key prefix to search (e.g., "lock:roomId:showtimeId:")
+   * @returns Array of active locks with key, userId, and remaining TTL
+   */
+  listActive(prefix: string): Promise<{ key: string; userId: string; ttl: number }[]>;
 }

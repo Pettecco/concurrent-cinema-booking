@@ -3,17 +3,17 @@
 interface SeatGridProps {
   layout: string;
   bookedSeats: string[];
-  selectedSeats: string[];
+  lockedSeats: string[];
+  myLockedSeats: string[];
   onToggleSeat: (seatId: string) => void;
-  onClearSeats: () => void;
 }
 
 export function SeatGrid({
   layout,
   bookedSeats,
-  selectedSeats,
+  lockedSeats,
+  myLockedSeats,
   onToggleSeat,
-  onClearSeats,
 }: SeatGridProps) {
   const [rows, cols] = layout.split("x").map(Number);
   const midCol = Math.floor(cols / 2);
@@ -53,22 +53,25 @@ export function SeatGrid({
             {Array.from({ length: cols }).map((_, col) => {
               const seatId = `${rowLabels[row]}${col + 1}`;
               const isBooked = bookedSeats.includes(seatId);
-              const isSelected = selectedSeats.includes(seatId);
+              const isLocked = lockedSeats.includes(seatId);
+              const isMyLock = myLockedSeats.includes(seatId);
               const isCorridor = col === midCol - 1;
 
               return (
                 <div key={seatId} className="flex items-center gap-4">
                   <button
-                    disabled={isBooked}
+                    disabled={isBooked || (isLocked && !isMyLock)}
                     onClick={() => onToggleSeat(seatId)}
                     className={`group relative h-16 w-16 rounded-xl border-2 transition-all duration-200 ${
                       isBooked
                         ? "cursor-not-allowed border-violet/30 bg-violet/20 opacity-50"
-                        : isSelected
-                          ? "scale-105 border-imperial-red bg-imperial-red shadow-[0_0_20px_rgba(247,67,70,0.5)]"
-                          : "cursor-pointer border-gray/30 bg-background-3 hover:scale-110 hover:border-imperial-red hover:bg-imperial-red/20 hover:shadow-[0_0_15px_rgba(247,67,70,0.3)] active:scale-95"
+                        : isMyLock
+                          ? "scale-105 border-carrow-orange bg-carrow-orange shadow-[0_0_20px_rgba(241,143,1,0.5)]"
+                          : isLocked
+                            ? "cursor-not-allowed border-carrow-orange/50 bg-carrow-orange/20"
+                            : "cursor-pointer border-gray/30 bg-background-3 hover:scale-110 hover:border-imperial-red hover:bg-imperial-red/20 hover:shadow-[0_0_15px_rgba(247,67,70,0.3)] active:scale-95"
                     }`}
-                  ></button>
+                  />
                   {isCorridor && <div className="w-12" />}
                 </div>
               );
@@ -79,8 +82,8 @@ export function SeatGrid({
 
       <div className="flex items-center gap-12">
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl border-2 border-imperial-red bg-imperial-red" />
-          <span className="text-xl font-bold text-white">Selecionado</span>
+          <div className="h-10 w-10 rounded-xl border-2 border-carrow-orange bg-carrow-orange" />
+          <span className="text-xl font-bold text-white">Travado</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl border-2 border-violet/40 bg-violet/40" />
