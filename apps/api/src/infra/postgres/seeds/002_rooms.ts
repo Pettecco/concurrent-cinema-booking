@@ -21,7 +21,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Sala 3',
       movie_id: '550e8400-e29b-41d4-a716-446655440003',
       total_seats: 35,
-      layout: '7x5',
+      layout: '5x7',
     },
   ]);
 

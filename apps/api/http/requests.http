@@ -215,10 +215,3 @@ Content-Type: {{contentType}}
 
 ### 7. List all bookings for Room 1
 GET {{baseUrl}}/bookings/660e8400-e29b-41d4-a716-446655440001
-
-# ============================================================
-# Swagger
-# ============================================================
-
-### OpenAPI Documentation
-GET {{baseUrl}}/docs
