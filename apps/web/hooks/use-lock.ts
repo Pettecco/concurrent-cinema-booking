@@ -24,6 +24,8 @@ export function useLock(
   const userId = useUserId();
   const [lockedSeats, setLockedSeats] = useState<string[]>([]);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lockedSeatsRef = useRef<string[]>([]);
 
@@ -34,6 +36,7 @@ export function useLock(
     if (!sessionExpiresAt) return;
 
     timerRef.current = setInterval(() => {
+      setTick((t) => t + 1);
       if (Date.now() >= sessionExpiresAt) {
         const seatsToRelease = lockedSeatsRef.current;
         if (userId && roomId && showtimeId && seatsToRelease.length) {
