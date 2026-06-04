@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 type WebSocketEvent =
@@ -60,13 +60,13 @@ export function useWebSocket(): UseWebSocketReturn {
     };
   }, []);
 
-  const subscribe = (roomId: string) => {
+  const subscribe = useCallback((roomId: string) => {
     socketRef.current?.emit("subscribe", roomId);
-  };
+  }, []);
 
-  const unsubscribe = (roomId: string) => {
+  const unsubscribe = useCallback((roomId: string) => {
     socketRef.current?.emit("unsubscribe", roomId);
-  };
+  }, []);
 
   return { connected, subscribe, unsubscribe, events };
 }
