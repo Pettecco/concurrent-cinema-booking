@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 
 interface MovieCardProps {
@@ -27,14 +26,12 @@ export const MovieCard = ({
       onClick={onClick}
       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-lg bg-background-2 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-imperial-red/20"
     >
-      <div className="aspect-[2/3] w-full overflow-hidden bg-background-3">
+      <div className="relative aspect-[2/3] w-full min-h-[300px] overflow-hidden bg-background-3">
         {bannerUrl && (
-          <Image
+          <img
             src={bannerUrl}
             alt={title}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className={`object-cover transition-all duration-500 ${
+            className={`h-full w-full object-cover transition-all duration-500 ${
               imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
             } group-hover:scale-110`}
             onLoad={() => setImageLoaded(true)}

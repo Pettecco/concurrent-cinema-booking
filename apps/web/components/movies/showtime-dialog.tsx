@@ -69,7 +69,7 @@ export function ShowtimeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background-2 text-white">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl font-bold text-imperial-red">
+          <DialogTitle className="text-center text-lg font-bold text-imperial-red leading-tight">
             {movieTitle}
           </DialogTitle>
           {movieDescription && (
