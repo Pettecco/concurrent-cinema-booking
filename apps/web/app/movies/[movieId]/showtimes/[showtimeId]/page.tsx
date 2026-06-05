@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLock } from "@/hooks/use-lock";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -132,6 +132,7 @@ function ErrorState({ message }: { message: string }) {
 
 export default function SeatSelectionPage() {
   const params = useParams<{ movieId: string; showtimeId: string }>();
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
@@ -170,12 +171,14 @@ export default function SeatSelectionPage() {
   };
 
   const handleConfirmBooking = async (email: string) => {
-    if (!showtime?.roomId || !showtimeId) return;
+    if (!showtime?.roomId || !showtimeId || !movie || !room) return;
     setConfirming(true);
     setEmailDialogOpen(false);
 
+    const bookingIds: string[] = [];
+
     for (const seatId of lockedSeats) {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,9 +189,22 @@ export default function SeatSelectionPage() {
           email,
         }),
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        bookingIds.push(data.id);
+      }
     }
 
-    setConfirming(false);
+    const params = new URLSearchParams({
+      movie: movie.title,
+      showtime: `${showtime.startTime} — ${showtime.endTime}`,
+      room: room.name,
+      seats: lockedSeats.join(","),
+      bookingId: bookingIds[0] ?? "",
+    });
+
+    router.push(`/movies/${movieId}/showtimes/${showtimeId}/confirmation?${params}`);
   };
 
   if (error) {
