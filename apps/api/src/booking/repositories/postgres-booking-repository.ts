@@ -122,7 +122,8 @@ export class PostgresBookingRepository implements IBookingRepository {
         movie_title: string;
         start_time: string;
         seat_id: string;
-      }>('m.title as movie_title', 's.start_time as start_time', 'b.seat_id')
+        room_name: string;
+      }>('m.title as movie_title', 's.start_time as start_time', 'b.seat_id', 'r.name as room_name')
       .from('bookings as b')
       .join('showtimes as s', 'b.showtime_id', 's.id')
       .join('rooms as r', 's.room_id', 'r.id')
@@ -138,6 +139,7 @@ export class PostgresBookingRepository implements IBookingRepository {
       movieTitle: result.movie_title,
       showtime: result.start_time,
       seatId: result.seat_id,
+      roomName: result.room_name,
       bookingId,
     };
   }

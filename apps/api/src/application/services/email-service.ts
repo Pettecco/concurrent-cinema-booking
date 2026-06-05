@@ -1,48 +1,33 @@
 import { emailQueue } from '../../infra/queues/email-queue.js';
 
 export class EmailService {
-  async sendBookingConfirmation(
-    email: string,
-    booking: {
-      movieTitle: string;
-      showtime: string;
-      seatId: string;
-      bookingId: string;
-    }
-  ) {
+  async sendBookingConfirmation(email: string, booking: any) {
     await emailQueue.add('booking-confirmation', {
       to: email,
       subject: 'Reserva Confirmada - Cinema',
-      body: `Sua reserva foi confirmada!\n\nFilme: ${booking.movieTitle}\nHorário: ${booking.showtime}\nAssento: ${booking.seatId}\nCódigo: ${booking.bookingId}`,
+      body: `Sua reserva foi confirmada!\n\nFilme: ${booking.movieTitle}\nHorário: ${booking.showtime}\nSala: ${booking.roomName}\nAssento: ${booking.seatId}\nCódigo: ${booking.bookingId}`,
       html: `
         <h1>Reserva Confirmada!</h1>
         <p><strong>Filme:</strong> ${booking.movieTitle}</p>
         <p><strong>Horário:</strong> ${booking.showtime}</p>
+        <p><strong>Sala:</strong> ${booking.roomName}</p>
         <p><strong>Assento:</strong> ${booking.seatId}</p>
         <p><strong>Código:</strong> ${booking.bookingId}</p>
       `,
     });
   }
 
-  async sendBatchBookingConfirmation(
-    email: string,
-    bookings: {
-      movieTitle: string;
-      showtime: string;
-      seatId: string;
-      bookingId: string;
-    }[]
-  ) {
+  async sendBatchBookingConfirmation(email: string, bookings: any[]) {
     if (!bookings.length) return;
 
-    const seatList = bookings.map((b) => b.seatId).join(', ');
-    const bookingIds = bookings.map((b) => b.bookingId).join(', ');
     const first = bookings[0]!;
+    const seatList = bookings.map((b) => b.seatId).join(', ');
+    const bookingId = first.bookingId;
 
     await emailQueue.add('booking-confirmation', {
       to: email,
       subject: 'Reserva Confirmada - Cinema',
-      body: `Sua reserva foi confirmada!\n\nFilme: ${first.movieTitle}\nHorário: ${first.showtime}\nAssentos: ${seatList}\nCódigos: ${bookingIds}`,
+      body: `Sua reserva foi confirmada!\n\nFilme: ${first.movieTitle}\nHorário: ${first.showtime}\nSala: ${first.roomName}\nAssentos: ${seatList}\nCódigo: ${bookingId}`,
       html: `
         <div style="max-width: 400px; margin: 0 auto; font-family: Arial, sans-serif; background: #161621; color: #ffffff; border-radius: 16px; overflow: hidden;">
           <div style="padding: 32px 24px 16px; text-align: center;">
@@ -56,11 +41,11 @@ export class EmailService {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
               <div>
                 <p style="margin: 0 0 4px; font-size: 12px; color: #cbcbcb;">Sala</p>
-                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ffffff;">${first.movieTitle}</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ffffff;">${first.roomName}</p>
               </div>
               <div>
                 <p style="margin: 0 0 4px; font-size: 12px; color: #cbcbcb;">Pedido</p>
-                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #f74346;">${bookingIds}</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #f74346;">${bookingId}</p>
               </div>
               <div>
                 <p style="margin: 0 0 4px; font-size: 12px; color: #cbcbcb;">Ingressos</p>
