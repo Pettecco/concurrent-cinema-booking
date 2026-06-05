@@ -59,6 +59,21 @@ export function useLock(
     };
   }, [sessionExpiresAt, userId, roomId, showtimeId]);
 
+  useEffect(() => {
+    return () => {
+      const seatsToRelease = lockedSeatsRef.current;
+      if (userId && roomId && showtimeId && seatsToRelease.length) {
+        for (const seatId of seatsToRelease) {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/locks`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roomId, showtimeId, seatId, userId }),
+          });
+        }
+      }
+    };
+  }, [userId, roomId, showtimeId]);
+
   const lockSeat = useCallback(
     async (input: LockInput): Promise<boolean> => {
       if (!userId) return false;
