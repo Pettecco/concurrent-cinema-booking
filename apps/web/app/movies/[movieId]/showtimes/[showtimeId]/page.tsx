@@ -175,36 +175,34 @@ export default function SeatSelectionPage() {
     setConfirming(true);
     setEmailDialogOpen(false);
 
-    const bookingIds: string[] = [];
-
-    for (const seatId of lockedSeats) {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomId: showtime.roomId,
-          showtimeId,
-          seatId,
-          userId,
-          email,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        bookingIds.push(data.id);
-      }
-    }
-
-    const params = new URLSearchParams({
-      movie: movie.title,
-      showtime: `${showtime.startTime} — ${showtime.endTime}`,
-      room: room.name,
-      seats: lockedSeats.join(","),
-      bookingId: bookingIds[0] ?? "",
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId: showtime.roomId,
+        showtimeId,
+        seatIds: lockedSeats,
+        userId,
+        email,
+      }),
     });
 
-    router.push(`/movies/${movieId}/showtimes/${showtimeId}/confirmation?${params}`);
+    if (response.ok) {
+      const data = await response.json();
+      const bookingIds = data.map((b: { id: string }) => b.id);
+
+      const params = new URLSearchParams({
+        movie: movie.title,
+        showtime: `${showtime.startTime} — ${showtime.endTime}`,
+        room: room.name,
+        seats: lockedSeats.join(","),
+        bookingId: bookingIds[0] ?? "",
+      });
+
+      router.push(`/movies/${movieId}/showtimes/${showtimeId}/confirmation?${params}`);
+    } else {
+      setConfirming(false);
+    }
   };
 
   if (error) {

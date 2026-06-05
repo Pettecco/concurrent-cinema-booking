@@ -87,4 +87,31 @@ export class BookingService {
   async getBookingDetails(bookingId: string) {
     return this.bookingRepository.getBookingDetails(bookingId);
   }
+
+  async bookBatch(
+    input: {
+      roomId: string;
+      showtimeId: string;
+      seatIds: string[];
+      userId: string;
+      email: string;
+      status: string;
+    }
+  ): Promise<Booking[]> {
+    const bookings: Booking[] = [];
+
+    for (const seatId of input.seatIds) {
+      const booking = await this.book({
+        roomId: input.roomId,
+        showtimeId: input.showtimeId,
+        seatId,
+        userId: input.userId,
+        email: input.email,
+        status: input.status,
+      });
+      bookings.push(booking);
+    }
+
+    return bookings;
+  }
 }

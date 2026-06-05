@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { BookingService } from '../../application/booking-service.js';
 import {
   createBookingSchema,
+  createBatchBookingSchema,
   listBookingSchema,
 } from '../schemas/booking.schema.js';
 import type { Broadcast } from '../../../infra/websocket/broadcast.js';
@@ -59,6 +60,60 @@ export class BookingController {
         roomId,
         showtimeId,
         seatId,
+        userId,
+        reason,
+      });
+      throw error;
+    }
+  }
+
+  async createBatch(req: Request, res: Response) {
+    const input = createBatchBookingSchema.safeParse(req.body);
+    if (!input.success) {
+      return res.status(400).json({ errors: input.error.issues });
+    }
+
+    const { roomId, showtimeId, seatIds, userId, email } = input.data;
+
+    try {
+      const bookings = await this.service.bookBatch({
+        roomId,
+        showtimeId,
+        seatIds,
+        userId,
+        email,
+        status: 'CONFIRMED',
+      });
+
+      for (const booking of bookings) {
+        this.broadcast.emitSeatBooked(roomId, booking.seatId, userId);
+
+        await this.auditService.emit('booking.created', {
+          bookingId: booking.id,
+          roomId,
+          showtimeId,
+          seatId: booking.seatId,
+          userId,
+          email,
+        });
+      }
+
+      const bookingDetails = await Promise.all(
+        bookings.map((b) => this.service.getBookingDetails(b.id))
+      );
+
+      await this.emailService.sendBatchBookingConfirmation(
+        email,
+        bookingDetails
+      );
+
+      return res.status(201).json(bookings);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown';
+      await this.auditService.emit('booking.failed', {
+        roomId,
+        showtimeId,
+        seatIds,
         userId,
         reason,
       });
