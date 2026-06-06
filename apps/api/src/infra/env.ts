@@ -15,6 +15,10 @@ const envSchema = z.object({
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
 
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().default(1025),
+  EMAIL_FROM: z.string().default('Cinema <noreply@cinema.com>'),
+
   LOG_LEVEL: z.string().default('info'),
 });
 

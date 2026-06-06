@@ -1,6 +1,6 @@
-# Cinema Booking - Concorrência & Race Conditions
+# Cinema Booking - Sistema de Reserva de Cinemas
 
-> Estudo prático de concorrência, race conditions e locks distribuídos em Node.js
+Estudo prático de concorrência, race conditions e locks distribuídos em Node.js com WebSockets.
 
 ## Objetivo
 
@@ -16,6 +16,18 @@ A ideia principal:
 ```txt
 Múltiplos usuários tentando reservar o mesmo assento ao mesmo tempo.
 ```
+
+## Funcionalidades
+
+- **Listagem de filmes** com dados do TMDB
+- **Salas e horários (showtimes)** por filme
+- **Lock distribuído** de assentos com Redis (TTL 5min)
+- **Reserva em batch** de múltiplos assentos em uma única request
+- **WebSocket em tempo real** para atualização de assentos entre usuários
+- **Keyspace Events** do Redis para liberação automática de locks expirados
+- **Envio de email** com template de ticket de cinema (BullMQ + Mailhog)
+- **Auditoria completa** de todos os eventos (locks, bookings, falhas)
+- **Documentação Swagger** em `/docs`
 
 ## A Jornada: Resolvendo Race Conditions
 
@@ -192,54 +204,54 @@ Todas as instâncias respeitam o mesmo lock.
 ### Visão Geral do Sistema
 
 ```
-                                       ┌─────────────────┐
-                                       │   Load Balancer │
-                                       │     (nginx)     │
-                                       └────────┬────────┘
-                                                │
-               ┌────────────────────────────────┼────────────────────────────────┐
-               │                                │                                │
-               ▼                                ▼                                ▼
-      ┌────────────────┐              ┌────────────────┐              ┌────────────────┐
-      │  Node.js #1    │              │  Node.js #2    │              │  Node.js #N    │
-      │  ┌──────────┐  │              │  ┌──────────┐  │              │  ┌──────────┐  │
-      │  │ Express  │  │              │  │ Express  │  │              │  │ Express  │  │
-      │  │   HTTP   │  │              │  │   HTTP   │  │              │  │   HTTP   │  │
-      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
-      │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
-      │  │ WebSocket│  │              │  │ WebSocket│  │              │  │ WebSocket│  │
-      │  │ (Socket) │  │              │  │ (Socket) │  │              │  │ (Socket) │  │
-      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
-      │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
-      │  │ BullMQ   │  │              │  │ BullMQ   │  │              │  │ BullMQ   │  │
-      │  │ Producer │  │              │  │ Producer │  │              │  │ Producer │  │
-      │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
-      └───────┼────────┘              └───────┼────────┘              └───────┼────────┘
-              │                               │                               │
-              └───────────────────────────────┼───────────────────────────────┘
-                                              │
-                    ┌─────────────────────────┼─────────────────────────┐
-                    │                         │                         │
-                    ▼                         ▼                         ▼
-           ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
-           │     Redis      │       │   PostgreSQL   │       │  Worker Node   │
-           │   ┌────────┐   │       │   ┌────────┐   │       │  ┌──────────┐  │
-           │   │Locks   │   │       │   │Movies  │   │       │  │ BullMQ   │  │
-           │   │Pub/Sub │   │       │   │Bookings│   │       │  │ Consumer │  │
-           │   │Events  │   │       │   │Rooms   │   │       │  └────┬─────┘  │
-           │   │Sessions│   │       │   │Showtime│   │       │       │        │
-           │   │Queues  │   │       │   └────────┘   │       │       ▼        │
-           │   │(BullMQ)│   │       └────────────────┘       │  ┌──────────┐  │
-           │   └────────┘   │                                │  │   Jobs   │  │
-           └────────────────┘                                │  │ - Audit  │  │
-                                                             │  │ - Email  │  │
-                                                             │  └──────────┘  │
-                                                             └────────────────┘
+                                        ┌─────────────────┐
+                                        │   Load Balancer │
+                                        │     (nginx)     │
+                                        └────────┬────────┘
+                                                 │
+                ┌────────────────────────────────┼────────────────────────────────┐
+                │                                │                                │
+                ▼                                ▼                                ▼
+       ┌────────────────┐              ┌────────────────┐              ┌────────────────┐
+       │  Node.js #1    │              │  Node.js #2    │              │  Node.js #N    │
+       │  ┌──────────┐  │              │  ┌──────────┐  │              │  ┌──────────┐  │
+       │  │ Express  │  │              │  │ Express  │  │              │  │ Express  │  │
+       │  │   HTTP   │  │              │  │   HTTP   │  │              │  │   HTTP   │  │
+       │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
+       │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
+       │  │ WebSocket│  │              │  │ WebSocket│  │              │  │ WebSocket│  │
+       │  │ (Socket) │  │              │  │ (Socket) │  │              │  │ (Socket) │  │
+       │  └─────────┘  │              │  └────┬─────┘  │              │  └─────────┘  │
+       │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
+       │  │ BullMQ   │  │              │  │ BullMQ   │  │              │  │ BullMQ   │  │
+       │  │ Producer │  │              │  │ Producer │  │              │  │ Producer │  │
+       │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
+       └───────┼────────┘              └───────┼────────┘              └───────┼────────┘
+               │                               │                               │
+               └───────────────────────────────┼───────────────────────────────┘
+                                               │
+                     ┌─────────────────────────┼─────────────────────────┐
+                     │                         │                         │
+                     ▼                         ▼                         ▼
+            ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
+            │     Redis      │       │   PostgreSQL   │       │  Worker Node   │
+            │   ┌────────┐   │       │   ┌────────┐   │       │  ┌──────────┐  │
+            │   │Locks   │   │       │   │Movies  │   │       │  │ BullMQ   │  │
+            │   │Pub/Sub │   │       │   │Bookings│   │       │  │ Consumer │  │
+            │   │Events  │   │       │   │Rooms   │   │       │  └────┬─────┘  │
+            │   │Sessions│   │       │   │Showtime│   │       │       │        │
+            │   │Queues  │   │       │   └────────┘   │       │       ▼        │
+            │   │(BullMQ)│   │       └────────────────┘       │  ┌──────────┐  │
+            │   └────────┘   │                                │  │   Jobs   │  │
+            └────────────────┘                                │  │ - Audit  │  │
+                                                              │  │ - Email  │  │
+                                                              │  └──────────┘  │
+                                                              └────────────────┘
 ```
 
 ### Schema do Banco de Dados
 
-![Database Schema](src/infra/postgres/db.png)
+![Database Schema](apps/api/src/infra/postgres/db.png)
 
 > **Obs:** A imagem não inclui a tabela `audit_logs` (adicionada posteriormente para auditoria de eventos).
 
@@ -283,7 +295,7 @@ Todas as instâncias respeitam o mesmo lock.
   │                    ALL CONNECTED CLIENTS                        │
   │  ┌───────────────────────────────────────────────────────────┐  │
   │  │  { type: "SEAT_SELECTED", seatId: "A1", expiresAt: ... }  │  │
-  │  └───────────────────────────────────────────────────────────┘  │
+  │  ───────────────────────────────────────────────────────────┘  │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -292,6 +304,8 @@ Todas as instâncias respeitam o mesmo lock.
 A API é documentada com **Swagger** e está disponível na rota: `/docs`
 
 ## Tecnologias
+
+### Backend
 
 | Tecnologia                                                                                                               | Versão | Descrição          |
 | ------------------------------------------------------------------------------------------------------------------------ | ------ | ------------------ |
@@ -307,24 +321,40 @@ A API é documentada com **Swagger** e está disponível na rota: `/docs`
 | <img src="https://raw.githubusercontent.com/vitest-dev/vitest/main/docs/public/logo.svg" width="16"/> Vitest             | 4      | Testes             |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="16"/> Docker             | -      | Containers         |
 
+### Frontend
+
+| Tecnologia                                                                                                               | Versão | Descrição       |
+| ------------------------------------------------------------------------------------------------------------------------ | ------ | --------------- |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" width="16"/> Next.js            | 16     | Framework React |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="16"/> React                | 19     | Biblioteca UI   |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="16"/> TypeScript | -      | Linguagem       |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg" width="16"/> Tailwind | 4      | CSS Framework   |
+| <img src="https://ui.shadcn.com/favicon.ico" width="16"/> shadcn/ui                                                      | -      | Componentes UI  |
+| <img src="https://lucide.dev/favicon.ico" width="16"/> Lucide                                                            | -      | Ícones          |
+
 ## Setup
 
 ```bash
 git clone <repo-url>
+cd cinema-booking
 
-cd concurrent-cinema-booking
+# Infraestrutura
+docker-compose up -d postgres redis mailhog
 
-cp .env.example .env  # ajustar configuração
+# Instalar dependências
 pnpm install
-docker-compose up -d
+
+# Rodar migrations
 pnpm migrate:latest
+
+# Iniciar apps
 pnpm dev
 ```
 
 **Variáveis de ambiente:**
 
 | Variável     | Descrição                          | Exemplo                       |
-| ------------ | ---------------------------------- | ----------------------------- |
+| ------------ | ---------------------------------- | ----------------------------- | --- |
 | `PORT`       | Porta em que a API será iniciada   | `3000`                        |
 | `DB_HOST`    | Host do banco de dados PostgreSQL  | `localhost`                   |
 | `DB_PORT`    | Porta do banco de dados PostgreSQL | `5432`                        |
@@ -333,28 +363,28 @@ pnpm dev
 | `REDIS_PORT` | Porta da instância Redis           | `6379`                        |
 | `SMTP_HOST`  | Host do servidor SMTP (Mailhog)    | `localhost`                   |
 | `SMTP_PORT`  | Porta do servidor SMTP             | `1025`                        |
-| `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |
+| `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |     |
 
 ### WebSocket Events
 
 **Conexão:** `ws://localhost:3000/ws` (mesma porta do HTTP + path `/ws`)
 
-| Evento          | Direção         | Payload                                           | Descrição      |
-| --------------- | --------------- | ------------------------------------------------- | -------------- |
-| `SEAT_SELECTED` | Server → Client | `{roomId, showtimeId, seatId, userId, expiresAt}` | Lock adquirido |
-| `SEAT_BOOKED`   | Server → Client | `{roomId, showtimeId, seatId, bookingId}`         | Reserva criada |
-| `SEAT_RELEASED` | Server → Client | `{roomId, showtimeId, seatId}`                    | Lock liberado  |
+| Evento          | Direção         | Payload                               | Descrição      |
+| --------------- | --------------- | ------------------------------------- | -------------- |
+| `seat_locked`   | Server → Client | `{roomId, seatId, userId, expiresAt}` | Lock adquirido |
+| `seat_booked`   | Server → Client | `{roomId, seatId, userId}`            | Reserva criada |
+| `seat_released` | Server → Client | `{roomId, seatId}`                    | Lock liberado  |
+| `lock_expired`  | Server → Client | `{roomId, seatId}`                    | Lock expirou   |
 
 **Exemplo de evento:**
 
 ```json
 {
   "type": "SEAT_BOOKED",
-  "occurredAt": "2026-05-27T14:00:00.000Z",
   "roomId": "660e8400-e29b-41d4-a716-446655440001",
   "showtimeId": "8fa5eeb0-3bc4-4182-9cb9-7ba8f55ae873",
   "seatId": "A1",
-  "bookingId": "a3f8c2d1-5e7b-4f9a-8c6d-1b2e3f4a5b6c"
+  "userId": "550e8400-e29b-41d4-a716-446655440100"
 }
 ```
 
@@ -370,27 +400,28 @@ pnpm cleanup  # limpa banco e Redis
 
 ## Decisões de Design
 
-| Decisão                          | Razão                                                                 |
-| -------------------------------- | --------------------------------------------------------------------- |
-| Lock por showtime                | Mesmo assento pode ser travado em horários diferentes simultaneamente |
-| Lock obrigatório                 | Previne race conditions, dá feedback imediato ao usuário              |
-| TTL de 5 minutos                 | Tempo razoável para completar booking, previne locks órfãos           |
-| Liberação automática pós-booking | Garante cleanup, evita chamadas manuais                               |
-| Validação de ownership           | Previne que usuário A libere lock do usuário B                        |
-| WebSocket + Keyspace Events      | Notificação em tempo real sem polling                                 |
+| Decisão                         | Razão                                                                 |
+| ------------------------------- | --------------------------------------------------------------------- |
+| Lock por showtime               | Mesmo assento pode ser travado em horários diferentes simultaneamente |
+| Lock obrigatório                | Previne race conditions, dá feedback imediato ao usuário              |
+| TTL de 5 minutos                | Tempo razoável para completar booking, previne locks órfãos           |
+| Liberação automática no unmount | Garante cleanup quando usuário sai da página                          |
+| Batch booking                   | Um único email com todos os assentos, melhor UX                       |
+| Validação de ownership          | Previne que usuário A libere lock do usuário B                        |
+| WebSocket + Keyspace Events     | Notificação em tempo real sem polling                                 |
 
 ## Pub/Sub e Keyspace Events
 
-**Pub/Sub (Socket.IO Redis Adapter):** sincroniza múltiplos servidores WebSocket. Quando um servidor faz `io.to(movieId).emit()`, o Redis distribui para todos os servidores com clients na sala `movieId`.
+**Pub/Sub (Socket.IO Redis Adapter):** sincroniza múltiplos servidores WebSocket. Quando um servidor faz `io.to(roomId).emit()`, o Redis distribui para todos os servidores com clients na sala `roomId`.
 
-**Keyspace Events:** notificação automática do Redis quando uma chave expira. O listener em `keyspace-listener.ts` escuta `__keyevent@0__:expired`, extrai `movieId` e `seatId` da key `lock:{movie}:{seat}`, e faz broadcast via WebSocket.
+**Keyspace Events:** notificação automática do Redis quando uma chave expira. O listener em `keyspace-listener.ts` escuta `__keyevent@0__:expired`, extrai `roomId`, `showtimeId` e `seatId` da key `lock:{roomId}:{showtimeId}:{seatId}`, e faz broadcast via WebSocket.
 
 **Fluxo:**
 
 1. Usuário seleciona **sala + horário (showtime)** → vê assentos disponíveis
-2. `POST /locks` com `{roomId, showtimeId, seatId}` → Redis SET `lock:roomId:showtimeId:seatId` com TTL 5min → broadcast `SEAT_SELECTED`
-3. TTL expira → Keyspace Event notifica → broadcast `LOCK_EXPIRED`
-4. `POST /bookings` → verifica lock → cria booking no Postgres (FK para showtime) → libera lock → broadcast `SEAT_BOOKED`
+2. `POST /locks` com `{roomId, showtimeId, seatId}` → Redis SET `lock:roomId:showtimeId:seatId` com TTL 5min → broadcast `seat_locked`
+3. TTL expira → Keyspace Event notifica → broadcast `lock_expired`
+4. `POST /bookings/batch` → verifica locks → cria bookings no Postgres → libera locks → broadcast `seat_booked` → envia email com ticket
 
 **Importante:** O lock é específico por **showtime**, então:
 
@@ -426,7 +457,6 @@ O sistema utiliza **BullMQ** para processamento assíncrono de duas funcionalida
                     │      Mailhog          │  │   PostgreSQL    │
                     │      (SMTP)           │  │   audit_logs    │
                     └───────────────────────┘  └─────────────────┘
-
 ```
 
 ### Serviços Utilizados
@@ -442,7 +472,7 @@ O sistema utiliza **BullMQ** para processamento assíncrono de duas funcionalida
 
 ## Envio de E-mail
 
-E-mails de confirmação de reserva são enviados de forma assíncrona para não bloquear a resposta ao usuário.
+E-mails de confirmação de reserva são enviados de forma assíncrona para não bloquear a resposta ao usuário. O email tem um **design de ticket de cinema** com filme, horário, sala, assentos e código de barras.
 
 ### Acessar e-mails (Mailhog)
 
@@ -462,28 +492,27 @@ SMTP_PORT=1025
 EMAIL_FROM=Cinema <noreply@cinema.com>
 ```
 
----
-
 ## Auditoria de Eventos
 
 Todos os eventos importantes do sistema são registrados para rastreabilidade e debugging.
 
 ### Eventos Auditados
 
-| Evento            | Quando                     | Aggregate ID                          |
-| ----------------- | -------------------------- | ------------------------------------- |
-| `LOCK_ACQUIRED`   | Lock adquirido com sucesso | `lock:{roomId}:{showtimeId}:{seatId}` |
-| `LOCK_RELEASED`   | Lock liberado manualmente  | `lock:{roomId}:{showtimeId}:{seatId}` |
-| `LOCK_EXPIRED`    | Lock expirou (TTL)         | `lock:{roomId}:{showtimeId}:{seatId}` |
-| `BOOKING_CREATED` | Reserva criada             | `bookingId`                           |
-| `BOOKING_FAILED`  | Falha na reserva           | `userId`                              |
+| Evento            | Quando                      | Aggregate ID                          |
+| ----------------- | --------------------------- | ------------------------------------- |
+| `lock.acquired`   | Lock adquirido com sucesso  | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `lock.released`   | Lock liberado manualmente   | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `lock.expired`    | Lock expirou (TTL)          | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `lock.conflict`   | Tentativa de lock duplicado | `lock:{roomId}:{showtimeId}:{seatId}` |
+| `booking.created` | Reserva criada              | `bookingId`                           |
+| `booking.failed`  | Falha na reserva            | `userId`                              |
 
 ### Tabela `audit_logs`
 
 | Coluna         | Tipo        | Descrição                          |
 | -------------- | ----------- | ---------------------------------- |
 | `id`           | UUID        | ID único do evento                 |
-| `event_type`   | VARCHAR     | Tipo do evento (ex: LOCK_ACQUIRED) |
+| `event_type`   | VARCHAR     | Tipo do evento (ex: lock.acquired) |
 | `aggregate_id` | UUID        | ID da entidade relacionada         |
 | `user_id`      | VARCHAR     | Usuário que originou o evento      |
 | `metadata`     | JSONB       | Dados contextuais do evento        |
@@ -505,6 +534,82 @@ ORDER BY occurred_at DESC;
 
 -- Eventos de lock expirado nas últimas 24 horas
 SELECT * FROM audit_logs
-WHERE event_type = 'LOCK_EXPIRED'
+WHERE event_type = 'lock.expired'
   AND occurred_at > NOW() - INTERVAL '24 hours';
+```
+
+## Configuração Docker
+
+### Estrutura de Serviços
+
+- **API**: Node.js + Express na porta 3000
+- **Web**: Next.js na porta 3001
+- **PostgreSQL**: Banco de dados na porta 5432
+- **Redis**: Cache/Queue na porta 6379
+- **Mailhog**: Email testing na porta 8025 (UI) e 1025 (SMTP)
+- **Adminer**: Database UI na porta 8082
+- **Redis Commander**: Redis UI na porta 8081
+
+### Setup Inicial
+
+#### 1. Copiar arquivos de configuração
+
+```bash
+# Na raiz do projeto
+cp .env.example .env
+
+# Na API
+cp apps/api/.env.example apps/api/.env
+
+# Na Web
+cp apps/web/.env.example apps/web/.env
+```
+
+#### 2. Subir os containers
+
+```bash
+# Build e start em modo daemon
+docker-compose up -d
+
+# Ou para ver os logs em tempo real
+docker-compose up
+
+# Verificar status
+docker-compose ps
+```
+
+### Acessar Serviços
+
+| Serviço                | URL                                                    |
+| ---------------------- | ------------------------------------------------------ |
+| **API**                | http://localhost:3000                                  |
+| **Web**                | http://localhost:3001                                  |
+| **Swagger (API Docs)** | http://localhost:3000/docs                             |
+| **Adminer (DB UI)**    | http://localhost:8082 (user: postgres, pass: postgres) |
+| **Mailhog (Email UI)** | http://localhost:8025                                  |
+| **Redis Commander**    | http://localhost:8081                                  |
+
+## Estrutura do Projeto
+
+```
+cinema-booking/
+├── apps/
+│   ├── api/                 # Backend Node.js + Express
+│   │   ├── src/
+│   │   │   ├── application/ # Services (Booking, Email, Audit)
+│   │   │   ├── audit/       # Módulo de auditoria
+│   │   │   ├── booking/     # Módulo de reservas
+│   │   │   ├── infra/       # PostgreSQL, Redis, WebSocket, Queues
+│   │   │   ├── movie/       # Módulo de filmes
+│   │   │   ├── room/        # Módulo de salas
+│   │   │   ├── showtime/    # Módulo de horários
+│   │   │   └── server.ts    # Entry point
+│   │   └── package.json
+│   └── web/                 # Frontend Next.js + shadcn
+│       ├── app/             # App Router (pages)
+│       ├── components/      # UI components
+│       ├── hooks/           # Custom hooks (useFetch, useLock, useWebSocket)
+│       └── package.json
+── docker-compose.yml       # Infraestrutura (Postgres, Redis, Mailhog)
+└── pnpm-workspace.yaml      # Monorepo config
 ```
