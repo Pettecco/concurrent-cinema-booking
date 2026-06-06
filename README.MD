@@ -1,4 +1,4 @@
-# Cinema Booking - Sistema de Reserva de Cinemas
+# Cinema Booking - Concorrência & Race Conditions
 
 Estudo prático de concorrência, race conditions e locks distribuídos em Node.js com WebSockets.
 
@@ -221,7 +221,7 @@ Todas as instâncias respeitam o mesmo lock.
        │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
        │  │ WebSocket│  │              │  │ WebSocket│  │              │  │ WebSocket│  │
        │  │ (Socket) │  │              │  │ (Socket) │  │              │  │ (Socket) │  │
-       │  └─────────┘  │              │  └────┬─────┘  │              │  └─────────┘  │
+       │  └────┬─────┘  │              │  └────┬─────┘  │              │  └────┬─────┘  │
        │  ┌────┴─────┐  │              │  ┌────┴─────┐  │              │  ┌────┴─────┐  │
        │  │ BullMQ   │  │              │  │ BullMQ   │  │              │  │ BullMQ   │  │
        │  │ Producer │  │              │  │ Producer │  │              │  │ Producer │  │
@@ -295,7 +295,7 @@ Todas as instâncias respeitam o mesmo lock.
   │                    ALL CONNECTED CLIENTS                        │
   │  ┌───────────────────────────────────────────────────────────┐  │
   │  │  { type: "SEAT_SELECTED", seatId: "A1", expiresAt: ... }  │  │
-  │  ───────────────────────────────────────────────────────────┘  │
+  │  ────────────────────────────────────────────────────────────┘  │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -354,16 +354,16 @@ pnpm dev
 **Variáveis de ambiente:**
 
 | Variável     | Descrição                          | Exemplo                       |
-| ------------ | ---------------------------------- | ----------------------------- | --- |
+| ------------ | ---------------------------------- | ----------------------------- |
 | `PORT`       | Porta em que a API será iniciada   | `3000`                        |
 | `DB_HOST`    | Host do banco de dados PostgreSQL  | `localhost`                   |
 | `DB_PORT`    | Porta do banco de dados PostgreSQL | `5432`                        |
 | `DB_NAME`    | Nome do banco de dados             | `cinema_booking`              |
 | `REDIS_HOST` | Host da instância Redis            | `localhost`                   |
 | `REDIS_PORT` | Porta da instância Redis           | `6379`                        |
-| `SMTP_HOST`  | Host do servidor SMTP (Mailhog)    | `localhost`                   |
+| `SMTP_HOST`  | Host do servidor SMTP (MailHog)    | `localhost`                   |
 | `SMTP_PORT`  | Porta do servidor SMTP             | `1025`                        |
-| `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |     |
+| `EMAIL_FROM` | Remetente padrão dos e-mails       | `Cinema <noreply@cinema.com>` |
 
 ### WebSocket Events
 
@@ -398,23 +398,19 @@ pnpm cleanup  # limpa banco e Redis
 
 **Testes manuais:** use os arquivos em `http/` com a extensão REST Client (VSCode).
 
-## Decisões de Design
-
-| Decisão                         | Razão                                                                 |
-| ------------------------------- | --------------------------------------------------------------------- |
-| Lock por showtime               | Mesmo assento pode ser travado em horários diferentes simultaneamente |
-| Lock obrigatório                | Previne race conditions, dá feedback imediato ao usuário              |
-| TTL de 5 minutos                | Tempo razoável para completar booking, previne locks órfãos           |
-| Liberação automática no unmount | Garante cleanup quando usuário sai da página                          |
-| Batch booking                   | Um único email com todos os assentos, melhor UX                       |
-| Validação de ownership          | Previne que usuário A libere lock do usuário B                        |
-| WebSocket + Keyspace Events     | Notificação em tempo real sem polling                                 |
-
 ## Pub/Sub e Keyspace Events
 
-**Pub/Sub (Socket.IO Redis Adapter):** sincroniza múltiplos servidores WebSocket. Quando um servidor faz `io.to(roomId).emit()`, o Redis distribui para todos os servidores com clients na sala `roomId`.
+### Pub/Sub (Socket.IO Redis Adapter)
 
-**Keyspace Events:** notificação automática do Redis quando uma chave expira. O listener em `keyspace-listener.ts` escuta `__keyevent@0__:expired`, extrai `roomId`, `showtimeId` e `seatId` da key `lock:{roomId}:{showtimeId}:{seatId}`, e faz broadcast via WebSocket.
+Em um ambiente com múltiplas instâncias da aplicação, os usuários podem estar conectados a servidores diferentes. Para garantir que todos recebam as mesmas atualizações em tempo real, é utilizado o mecanismo de Pub/Sub do Redis.
+
+Quando um servidor envia uma mensagem para uma sala WebSocket (`roomId`), o Redis repassa essa mensagem para as demais instâncias da aplicação. Dessa forma, todos os clientes conectados à sala recebem a atualização, independentemente do servidor ao qual estão conectados.
+
+### Keyspace Events
+
+Durante o processo de reserva, um assento pode ficar temporariamente bloqueado para evitar que outra pessoa o selecione ao mesmo tempo. Esse bloqueio é armazenado no Redis com um tempo de expiração.
+
+Os Keyspace Events permitem que a aplicação seja notificada automaticamente quando esse bloqueio expira. O listener definido em `keyspace-listener.ts` monitora esses eventos, identifica qual assento foi liberado e envia uma atualização via WebSocket para que todos os clientes visualizem a mudança em tempo real.
 
 **Fluxo:**
 
@@ -482,14 +478,6 @@ docker-compose up -d mailhog
 
 # Acessar interface web
 http://localhost:8025
-```
-
-### Variáveis de ambiente
-
-```env
-SMTP_HOST=localhost
-SMTP_PORT=1025
-EMAIL_FROM=Cinema <noreply@cinema.com>
 ```
 
 ## Auditoria de Eventos
@@ -610,6 +598,6 @@ cinema-booking/
 │       ├── components/      # UI components
 │       ├── hooks/           # Custom hooks (useFetch, useLock, useWebSocket)
 │       └── package.json
-── docker-compose.yml       # Infraestrutura (Postgres, Redis, Mailhog)
+│── docker-compose.yml       # Infraestrutura (Postgres, Redis, Mailhog)
 └── pnpm-workspace.yaml      # Monorepo config
 ```
