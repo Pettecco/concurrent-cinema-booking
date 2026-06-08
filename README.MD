@@ -558,36 +558,14 @@ docker compose ps
 
 ### Acessar Serviços
 
-| Serviço                | URL                                                    | Descrição                          |
-| ---------------------- | ------------------------------------------------------ | ---------------------------------- |
-| **API**                | http://localhost:3000                                  | Backend REST + WebSocket           |
-| **Web**                | http://localhost:3001                                  | Frontend Next.js                   |
-| **Swagger (API Docs)** | http://localhost:3000/docs                             | Documentação interativa da API     |
-| **Adminer (DB UI)**    | http://localhost:8082 (user: `postgres`, pass: `postgres`) | Interface do banco de dados        |
-| **Mailhog (Email UI)** | http://localhost:8025                                  | Visualização de e-mails enviados   |
-| **Redis Commander**    | http://localhost:8081                                  | Interface do Redis                 |
-
-### Comandos Úteis
-
-```bash
-# Rebuildar um serviço específico
-docker compose build api
-docker compose build web
-
-# Reiniciar serviços
-docker compose restart api web
-
-# Ver logs de um serviço
-docker compose logs api
-docker compose logs web
-
-# Parar tudo e limpar volumes
-docker compose down -v
-
-# Executar comandos dentro dos containers
-docker compose exec api sh
-docker compose exec web sh
-```
+| Serviço                | URL                                                        | Descrição                        |
+| ---------------------- | ---------------------------------------------------------- | -------------------------------- |
+| **API**                | http://localhost:3000                                      | Backend REST + WebSocket         |
+| **Web**                | http://localhost:3001                                      | Frontend Next.js                 |
+| **Swagger (API Docs)** | http://localhost:3000/docs                                 | Documentação interativa da API   |
+| **Adminer (DB UI)**    | http://localhost:8082 (user: `postgres`, pass: `postgres`) | Interface do banco de dados      |
+| **Mailhog (Email UI)** | http://localhost:8025                                      | Visualização de e-mails enviados |
+| **Redis Commander**    | http://localhost:8081                                      | Interface do Redis               |
 
 ### Rodando Migrations e Seeds Manualmente
 
