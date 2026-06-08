@@ -1,15 +1,50 @@
-node_modules
-npm-debug.log
+# Git
 .git
 .gitignore
-README.md
+
+# Dependencies
+node_modules
+
+# Environment
 .env
+.env.*
 .env.local
-.DS_Store
+.env.production
+
+# IDE
 .vscode
 .idea
+*.swp
+*.swo
+
+# Build outputs
 dist
 build
-coverage
 .next
 out
+coverage
+
+# Logs
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+docs
+
+# Test
+*.test.ts
+*.spec.ts
+__tests__
+.vitest

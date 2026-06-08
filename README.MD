@@ -538,44 +538,69 @@ WHERE event_type = 'lock.expired'
 - **Adminer**: Database UI na porta 8082
 - **Redis Commander**: Redis UI na porta 8081
 
-### Setup Inicial
-
-#### 1. Copiar arquivos de configuração
+### Setup Rápido
 
 ```bash
-# Na raiz do projeto
+# Copiar arquivo de ambiente
 cp .env.example .env
 
-# Na API
-cp apps/api/.env.example apps/api/.env
+# Build e start de todos os serviços
+docker compose up --build -d
 
-# Na Web
-cp apps/web/.env.example apps/web/.env
-```
-
-#### 2. Subir os containers
-
-```bash
-# Build e start em modo daemon
-docker-compose up -d
-
-# Ou para ver os logs em tempo real
-docker-compose up
+# Ver logs em tempo real
+docker compose logs -f
 
 # Verificar status
-docker-compose ps
+docker compose ps
 ```
+
+> **Nota:** As migrations e seeds são executadas automaticamente na primeira inicialização da API.
 
 ### Acessar Serviços
 
-| Serviço                | URL                                                    |
-| ---------------------- | ------------------------------------------------------ |
-| **API**                | http://localhost:3000                                  |
-| **Web**                | http://localhost:3001                                  |
-| **Swagger (API Docs)** | http://localhost:3000/docs                             |
-| **Adminer (DB UI)**    | http://localhost:8082 (user: postgres, pass: postgres) |
-| **Mailhog (Email UI)** | http://localhost:8025                                  |
-| **Redis Commander**    | http://localhost:8081                                  |
+| Serviço                | URL                                                    | Descrição                          |
+| ---------------------- | ------------------------------------------------------ | ---------------------------------- |
+| **API**                | http://localhost:3000                                  | Backend REST + WebSocket           |
+| **Web**                | http://localhost:3001                                  | Frontend Next.js                   |
+| **Swagger (API Docs)** | http://localhost:3000/docs                             | Documentação interativa da API     |
+| **Adminer (DB UI)**    | http://localhost:8082 (user: `postgres`, pass: `postgres`) | Interface do banco de dados        |
+| **Mailhog (Email UI)** | http://localhost:8025                                  | Visualização de e-mails enviados   |
+| **Redis Commander**    | http://localhost:8081                                  | Interface do Redis                 |
+
+### Comandos Úteis
+
+```bash
+# Rebuildar um serviço específico
+docker compose build api
+docker compose build web
+
+# Reiniciar serviços
+docker compose restart api web
+
+# Ver logs de um serviço
+docker compose logs api
+docker compose logs web
+
+# Parar tudo e limpar volumes
+docker compose down -v
+
+# Executar comandos dentro dos containers
+docker compose exec api sh
+docker compose exec web sh
+```
+
+### Rodando Migrations e Seeds Manualmente
+
+```bash
+# Rodar migrations
+docker compose exec api npx knex migrate:latest --knexfile knexfile.ts
+
+# Rodar seeds
+docker compose exec api npx knex seed:run --knexfile knexfile.ts
+
+# Rollback de migration
+docker compose exec api npx knex migrate:rollback --knexfile knexfile.ts
+```
 
 ## Estrutura do Projeto
 
