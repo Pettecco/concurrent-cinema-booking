@@ -13,6 +13,7 @@ import type { Booking, Room, Showtime, Movie } from "@/types/cinema";
 function useSeatSelection(movieId: string | null, showtimeId: string | null) {
   const { subscribe, events } = useWebSocket();
   const [remoteLockedSeats, setRemoteLockedSeats] = useState<string[]>([]);
+  const [bookingsVersion, setBookingsVersion] = useState(0);
 
   const { data: showtime, error: showtimeError } = useFetch<Showtime>(
     showtimeId ? `showtimes/${showtimeId}` : null,
@@ -27,7 +28,11 @@ function useSeatSelection(movieId: string | null, showtimeId: string | null) {
   );
 
   const { data: bookings, error: bookingsError } = useFetch<Booking[]>(
-    showtime?.roomId ? `bookings/${showtime.roomId}` : null,
+    showtime?.roomId && bookingsVersion > 0
+      ? `bookings/${showtime.roomId}?t=${bookingsVersion}`
+      : showtime?.roomId
+        ? `bookings/${showtime.roomId}`
+        : null,
   );
 
   const {
@@ -68,10 +73,15 @@ function useSeatSelection(movieId: string | null, showtimeId: string | null) {
         break;
       case "seat_released":
       case "lock_expired":
+        setRemoteLockedSeats((prev) =>
+          prev.filter((s) => s !== lastEvent.seatId),
+        );
+        break;
       case "seat_booked":
         setRemoteLockedSeats((prev) =>
           prev.filter((s) => s !== lastEvent.seatId),
         );
+        setBookingsVersion((v) => v + 1);
         break;
     }
   }, [events, room?.id]);
