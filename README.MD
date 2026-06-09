@@ -332,10 +332,10 @@ A API é documentada com **Swagger** e está disponível na rota: `/docs`
 | <img src="https://ui.shadcn.com/favicon.ico" width="16"/> shadcn/ui                                                      | -      | Componentes UI  |
 | <img src="https://lucide.dev/favicon.ico" width="16"/> Lucide                                                            | -      | Ícones          |
 
-## Setup
+## Setup (desenvolvimento local)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Pettecco/concurrent-cinema-booking.git
 cd cinema-booking
 
 # Infraestrutura
